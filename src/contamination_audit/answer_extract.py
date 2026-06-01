@@ -53,6 +53,10 @@ _EQUIVALENCE_RULES = {
 }
 
 
+_FRAC_PATTERN = re.compile(r"\\(?:t?frac|d?frac)\{([^{}]+)\}\{([^{}]+)\}")
+_DEGREE_PATTERN = re.compile(r"\^\{?\\circ\}?|°|deg(?:rees)?", re.IGNORECASE)
+
+
 def normalize(answer: str) -> str:
     """Strip whitespace, LaTeX commands, and degree/percent markers for cheap equality.
 
@@ -61,7 +65,8 @@ def normalize(answer: str) -> str:
     """
     s = answer.strip()
     s = re.sub(r"\\(?:text|mathrm|operatorname)\{([^}]*)\}", r"\1", s)
-    s = re.sub(r"\\circ|°|deg(rees)?", "", s, flags=re.IGNORECASE)
+    s = _FRAC_PATTERN.sub(r"\1/\2", s)  # \frac{a}{b} -> a/b
+    s = _DEGREE_PATTERN.sub("", s)
     s = re.sub(r"\s+", "", s)
     return _EQUIVALENCE_RULES.get(s, s)
 
