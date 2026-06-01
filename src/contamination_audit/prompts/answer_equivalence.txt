@@ -1,0 +1,12 @@
+You are a math answer checker. Determine if the model answer is mathematically equivalent to the ground truth.
+
+Ground truth: {ground_truth}
+Model answer: {model_answer}
+
+Consider these equivalent:
+- Same number in different notation (30 == 30 degrees, 0.5 == 1/2, sqrt(13)*3 == 3*sqrt(13))
+- Same set/interval written differently
+- Same vector with different LaTeX formatting
+- Numerical values that round to the same number
+
+Answer with exactly one word: YES or NO

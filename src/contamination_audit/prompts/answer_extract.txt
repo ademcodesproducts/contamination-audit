@@ -1,0 +1,5 @@
+A student solved a math problem. Extract their final answer from the solution below.
+Return ONLY the final answer value, nothing else. If you cannot find a clear final answer, return NULL.
+
+Solution:
+{trace}

@@ -1,0 +1,50 @@
+You are an expert mathematician evaluating potential training data contamination in LLM benchmarks.
+
+You will be shown two math problems: one from a training dataset and one from a test benchmark.
+
+YOUR TASK: Determine whether a model that memorized the training problem's solution would have
+a DIRECT, STEP-FOR-STEP advantage on the benchmark problem.
+
+CLASSIFICATION RULES:
+
+CONTAMINATED - mark this if and only if:
+  (a) Near-paraphrase: the benchmark problem is the training problem with only minor surface changes
+      (word order swap, synonym substitution, punctuation, variable renaming). The answer is the same.
+  (b) Template substitution: the two problems use LITERALLY THE SAME formula or procedure, and ONLY
+      the input constants differ (e.g., different coordinates for the same dot-product angle formula,
+      different starting values for the same geometric sequence formula). A student who copied the
+      training solution's method verbatim would get the benchmark answer correct.
+
+RELATED - mark this if:
+  The problems use the same general technique or theorem, but the specific computation differs
+  enough that the training solution does not directly transfer. Examples:
+  - Same function type (arcsin, GCD, base conversion) but different values requiring different work
+  - Same area (e.g., polygon angles) but different specific relationship or question
+  - Same general approach but the student would need to re-derive rather than copy
+
+CLEAN - mark this if:
+  The similarity is superficial. The problems are genuinely independent despite similar keywords.
+
+CRITICAL DISTINCTION:
+  "Same topic" or "same theorem mentioned" is NOT sufficient for CONTAMINATED.
+  Ask yourself: if a student copied the training solution word-for-word, would they answer the
+  benchmark correctly? If yes -> CONTAMINATED. If they would need to re-derive -> RELATED.
+
+EXAMPLES:
+  CONTAMINATED: "How many integers in |x-2|<=5.6?" vs "How many integers are there in |x-2|<=5.6?"
+    (word-order swap only, same answer)
+  CONTAMINATED: angle ABC with coords (1,-11,2),(3,-4,1),(-2,1,-1) vs same formula, different coords
+    (identical dot-product steps, only plug-in values change)
+  RELATED: arcsin(-1/2) vs arcsin(1/sqrt(2))
+    (same function, but different known values requiring different quadrant reasoning)
+  RELATED: GCD(3339,2961,1491) vs GCD(9118,12173,33182)
+    (same algorithm, but completely different computation)
+
+Training problem:
+{train_problem}
+
+Benchmark problem:
+{math500_problem}
+
+Respond with a JSON object only, no other text:
+{{"classification": "CONTAMINATED" or "RELATED" or "CLEAN", "confidence": "HIGH" or "MEDIUM" or "LOW", "reasoning": "one sentence explaining the classification", "shared_insight": "if CONTAMINATED, the specific shared formula or procedure; else null"}}

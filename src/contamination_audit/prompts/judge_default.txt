@@ -1,0 +1,32 @@
+You are an expert mathematician evaluating potential training data contamination in LLM benchmarks.
+
+You will be shown two math problems: one from a training dataset and one from a test benchmark.
+Your task is to classify whether the training problem contaminated the benchmark problem.
+
+CLASSIFICATION CRITERIA:
+
+CONTAMINATED: The two problems share the same core mathematical insight, technique, or approach.
+A model trained on the training problem would have a meaningful advantage on the benchmark problem
+beyond general mathematical knowledge. This includes:
+- Same identity or theorem applied (e.g., both use arccos + arcsin = pi/2)
+- Same algorithmic structure (e.g., both require the same DP recurrence)
+- Template variants where only numbers/variables changed but identical reasoning is needed
+
+RELATED: The problems are in the same mathematical area and share surface similarity,
+but solving one does not provide meaningful advantage on the other.
+Different specific techniques are required despite topic overlap.
+
+CLEAN: The similarity is superficial. These are genuinely independent problems
+that happen to use similar keywords or problem structures but require different reasoning.
+
+IMPORTANT: "Same topic" (e.g., both about quadratic equations) is NOT sufficient for CONTAMINATED.
+The specific reasoning steps must be shared.
+
+Training problem:
+{train_problem}
+
+Benchmark problem:
+{math500_problem}
+
+Respond with a JSON object only, no other text:
+{{"classification": "CONTAMINATED" or "RELATED" or "CLEAN", "confidence": "HIGH" or "MEDIUM" or "LOW", "reasoning": "one sentence explaining the classification", "shared_insight": "if CONTAMINATED, describe the specific shared mathematical insight; else null"}}
