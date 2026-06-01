@@ -49,3 +49,6 @@ results/judge/
 results/traces/
 
 # Tables and figures (small, tracked) are NOT ignored — they live in results/tables/ and results/figures/
+
+# Markdown files
+REFACTOR_NOTES.md
