@@ -1,0 +1,36 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# LaTeX intermediates (paper builds)
+*.aux
+*.fls
+*.fdb_latexmk
+*.log
+*.synctex.gz
+
+# Large data files (regenerable from HuggingFace, excluded from git)
+contamination_detection/data/openthoughts_full.jsonl
+contamination_detection/data/openthoughts.jsonl
+contamination_detection/data/tulu_math.jsonl
+
+# Large embedding caches (regenerable)
+contamination_detection/results/embedding_candidates/*.npy
+results/*.npy
+
+# Large traces (regenerable from inference)
+results/did_traces_openthoughts.jsonl
+results/did_traces_tulu.jsonl
+results/did_traces_openthoughts_judged.jsonl
+results/did_traces_tulu_judged.jsonl
+
+# Parquet outputs (will be regenerated under new layout)
+results/candidates.parquet
+results/judge_results.parquet
+
+# OS
+.DS_Store
+Thumbs.db

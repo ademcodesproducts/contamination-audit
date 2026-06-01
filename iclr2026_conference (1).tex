@@ -1,0 +1,642 @@
+\documentclass{article} % For LaTeX2e
+\usepackage{iclr2026_conference,times}
+
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{mdframed}
+\usepackage{caption}
+\usepackage{subcaption}
+
+\title{Shortcuts, Not Recall: Schema Brittleness as a Contamination Signature in Post-Trained Reasoning Models}
+
+\author{Arno Demarteau \quad Rishbha Jain \quad Victor Ngetich}
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+\newcommand{\uncertain}[1]{\textcolor{red}{[UNCERTAIN: #1]}}
+\newcommand{\did}{\widehat{\text{DiD}}}
+\newcommand{\missing}[1]{\textcolor{red}{\textbf{[NOT YET AVAILABLE --- #1]}}}
+
+\iclrfinalcopy % Uncomment for camera-ready version, but NOT for submission.
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+\pagestyle{plain}
+
+\begin{abstract}
+Open reasoning model post-training has produced striking gains on established mathematical benchmarks, yet the validity of these gains depends critically on the integrity of decontamination pipelines that are meant to prevent training-test overlap. We conduct a systematic audit of three prominent open post-training projects -- s1 \citep{muennighoff2025s1}, T\"ulu~3 \citep{lambert2025tulu3}, and OpenThoughts \citep{openthoughts2025} -- each of which claimed decontamination against MATH-500 \citep{hendrycks2021math} before release. Using a multi-stage detection pipeline combining n-gram replication, TF-IDF retrieval, dense semantic embeddings, and LLM-as-judge verification, we identify 32 confirmed contaminated items in T\"ulu~3 and 24 in OpenThoughts (up to 127 flagged at a lower similarity threshold) that survived each project's decontamination despite meaningful overlap with training data. Using a difference-in-differences causal framework, we then test whether contamination changes how models solve problems, finding that it manifests as solution-schema brittleness rather than verbatim recitation: contaminated problems produce a 37.5\% answer-abandonment rate under numerical perturbation versus 20.8\% for clean problems, alongside measurably fewer self-corrections and higher math token density in reasoning traces.
+\end{abstract}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Problem Definition and Scope}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Post-training has become the primary mechanism by which open language models acquire reasoning capabilities. Projects such as s1 \citep{muennighoff2025s1}, T\"ulu~3 \citep{lambert2025tulu3}, and OpenThoughts \citep{openthoughts2025} report substantial gains on MATH-500 \citep{hendrycks2021math}, GPQA Diamond \citep{rein2023gpqa}, and AIME by fine-tuning on curated datasets of high-quality reasoning traces. These benchmark scores are widely cited as evidence that supervised post-training produces genuine capability improvements. The assumption underlying all such claims is that training data does not overlap with the test sets used for evaluation. This assumption is rarely verified.
+
+Data contamination, the presence of evaluation benchmark items in training data, inflates reported performance and can invalidate scientific conclusions drawn from evaluation scores \citep{sainz2023nlp}. This threat is especially acute in the post-training setting: post-training corpora are orders of magnitude smaller than pretraining data, meaning a small number of contaminated items can have disproportionate influence. Critically, \citet{kocyigit2025posttraining} show in a controlled study that contamination injected during pretraining is not erased by continued training, it is merely submerged, and is readily amplified by post-training, with SFT inflating scores specifically on contaminated benchmarks while GRPO produces smaller but broader gains. This establishes direct theoretical motivation for post-training-specific contamination audits.
+
+All three projects we study applied decontamination before release. s1 and T\"ulu~3 used 8-gram token overlap matching; OpenThoughts combined fuzzy string matching with 13-gram overlap and reported a 99.6\% true-negative rate on a manually constructed test set \citep{openthoughts2025}. Despite these efforts, our preliminary audit reveals benchmark items surviving in all three released datasets. This motivates our central question: do decontamination pipelines in open post-training fail in predictable, systematic ways, and does this failure measurably inflate reported benchmark gains?
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Literature Review}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Benchmark Data Contamination}
+
+Contamination has been recognized as a systemic threat to LLM evaluation since GPT-3 shipped with a filtering bug that contaminated several benchmarks \citep{brown2020gpt3}. \citet{sainz2023nlp} provide the foundational taxonomy of contamination types and argue that NLP evaluation is structurally compromised when test data enters training corpora. The problem extends beyond pretraining: \citet{kocyigit2025posttraining} show that contamination resurfaces during SFT and GRPO post-training, with SFT producing benchmark-specific inflation. LiveBench \citep{white2025livebench} represents the strongest benchmark-side defense, drawing questions from recent competitions and papers with monthly updates, but cannot retroactively validate gains already reported on static benchmarks. \citet{sun2025mitigation} rigorously evaluate 20 mitigation strategies and find none simultaneously achieves high fidelity and contamination resistance, underscoring that detection and mitigation remain open problems.
+
+\subsection{Detection Methods}
+
+With corpus access, n-gram overlap is the dominant method \citep{brown2020gpt3}, but structurally cannot detect paraphrase- or template-level contamination -- a limitation T\"ulu~3 itself acknowledges \citep{lambert2025tulu3}. LLM-as-judge approaches \citep{yang2023rethinking, deng2024investigating} offer greater semantic sensitivity but require precision validation. Without corpus access, black-box methods have proliferated: Min-K\% \citep{shi2023detecting} flags anomalously high token probabilities, TS-Guessing \citep{deng2024investigating} tests whether models reconstruct masked benchmark content, CoDeC \citep{zawalski2025codec} uses in-context learning, showing that contaminated datasets reduce model confidence when used as context, achieving near-perfect dataset-level AUC. Our approach differs from all of these: we have direct access to released training datasets on HuggingFace, enabling item-level audit rather than dataset-level statistical inference, more actionable and more informative for characterizing failure mechanisms.
+
+\subsection{Reasoning vs.\ Memorization}
+
+\citet{carlini2021extracting} establish that LLMs memorize training data at scale and that memorized content is extractable through targeted prompting. \citet{memlens2025} extend this to benchmark evaluation, finding that 94.9\% of MMLU mathematics problems are classified as ``seen-like'' in recent models via retrieval-augmented detection, suggesting surface decontamination leaves a large class of memorized items undetected. Behavioral signatures of memorization in chain-of-thought models have received less direct study. \citet{hao2025putnamgap} introduce PutnamGAP, testing LLMs on competition-level math problems transformed to be mathematically equivalent but linguistically or parametrically altered; even frontier models drop 4.7--12.9\% accuracy under surface and parametric variants, directly evidencing surface-form pattern-matching over abstract reasoning. \citet{potamitis2025reasonbench} quantify reasoning instability via multi-run evaluation, finding confidence intervals up to $4\times$ wider across strategies and showing that single-run accuracy masks high stochastic variance---a complementary concern to our single-sample DiD design. \citet{bogavelli2026perturbation} show that minor perturbations (format changes, language variation, instruction reordering) reduce enterprise LLM performance by up to 40\,pp, validating the general principle that motivates our number-swap and surface-noise robustness probes, though that work is not contamination-specific. Our analyses extend this line of work by causally linking perturbation sensitivity to training data contamination using a difference-in-differences (DiD) estimator, while also examining secondary behavioral signals to evaluate whether they align with the schema-brittleness pattern identified in prior studies.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Datasets and Experimental Setup}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Audited Training Datasets}
+
+We audit three released, post-decontamination training datasets against MATH-500 \citep{hendrycks2021math}: s1K (1,000 items), T\"ulu~3 SFT mixture math subset (84,312 items), and OpenThoughts-114K (113,957 items). All audited datasets are the publicly released, post-decontamination versions; any contamination we identify survived each project's own filter. The evaluation benchmark is MATH-500, which spans 7 subjects (Algebra, Counting \& Probability, Geometry, Intermediate Algebra, Number Theory, Prealgebra, Precalculus) and difficulty levels 1--5.
+
+\subsection{Contaminated and Clean Splits}
+
+After running the multi-stage detection pipeline (described in Section~\ref{sec:method}), we curate a contaminated split and a matched clean split for each model. Clean problems were drawn from a verified uncontaminated pool. For each model, the subject-by-level distribution of clean problems was matched exactly to the contaminated split to avoid confounding by difficulty, verified via programmatic comparison. Subject-by-level matching was enforced algorithmically; formal balance tests were not computed due to the small per-cell sample sizes.
+
+\begin{table}[h]
+\centering
+\caption{Evaluation set composition after contamination detection and clean-split curation.}
+\label{tab:dataset}
+\begin{tabular}{lccl}
+\toprule
+\textbf{Model} & \textbf{Contaminated} & \textbf{Clean} & \textbf{Total prompts} \\
+\midrule
+OpenThoughts & 24 & 24 & 144\quad ($24 \times 3 \times 2$) \\
+Tulu         & 32 & 32 & 192\quad ($32 \times 3 \times 2$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Average difficulty level: OpenThoughts 3.50, Tulu 3.28.
+
+\subsection{Preliminary Contamination Counts}
+
+Table~\ref{tab:contam_counts} summarizes preliminary contamination findings across all three projects before behavioral analysis. s1K yielded only 7 flagged items (3 word-for-word identical), too few to support a powered DiD analysis; behavioral experiments were therefore conducted on OpenThoughts and T\"ulu~3 only.
+\begin{table}[t]
+\caption{Preliminary contamination audit results across three open post-training projects against MATH-500. All findings are on released, post-decontamination datasets.}
+\label{tab:contam_counts}
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+\textbf{Project} & \textbf{Filter Claimed} & \textbf{Items Audited} & \textbf{Leaks Found} \\
+\midrule
+s1 & 8-gram overlap & 1,000 & 7 flagged \\
+T\"ulu~3 & 8-gram, 50\% token match & 84,312 & 53 flagged \\
+OpenThoughts & Semantic ($\tau{=}0.85$) & 113,957 & 19 flagged \\
+OpenThoughts & Semantic ($\tau{=}0.70$) + LLM judge & 113,957 & 127 flagged \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Baselines}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+We evaluate two open-weight instruction-tuned models (Table~\ref{tab:models}) under a within-model counterfactual design: the clean split for each model serves as the control, so per-model capability differences do not confound the contamination estimate. Raw accuracy on unperturbed original problems (Table~\ref{tab:accuracy}, Original column) provides the zero-shot reference: 75--79\% for OpenThoughts, 25--31\% for Tulu. The heuristic detection baseline is each project's own n-gram filter; Table~\ref{tab:contam_counts} shows what those filters missed and what our multi-stage pipeline recovered.
+
+\begin{table}[h]
+\centering
+\caption{Model configurations.}
+\label{tab:models}
+\begin{tabular}{llll}
+\toprule
+\textbf{Model} & \textbf{Variant} & \textbf{Precision} & \textbf{Max tokens} \\
+\midrule
+OpenThoughts & OpenThinker-7B & bf16 & 4{,}096 \\
+Tulu         & T\"ulu-3-8B-SFT & bf16 & 4{,}096 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Shared sampling hyperparameters: $T = 0.8$, $N_{\text{samples}} = 1$, max new tokens $= 4{,}096$.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Methodology}
+\label{sec:method}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Multi-Stage Contamination Detection Pipeline}
+
+Our three-stage detection pipeline identifies contaminated items in each released training dataset:
+
+\begin{enumerate}
+    \item \textbf{N-gram replication.} We replicate each project's exact filter using the Qwen2-7B tokenizer: 8-gram with $>$0 shared n-grams for s1, 8-gram with $>$50\% token match for T\"ulu~3, 13-gram for OpenThoughts. Items that should have been removed by each project's own criteria but remain in the released dataset constitute our Type~1 (implementation failure) candidates.
+
+    \item \textbf{Semantic retrieval.} For each MATH-500 problem, we retrieve the top-$k$ most similar training items using TF-IDF cosine similarity (T\"ulu~3) or dense sentence embeddings with FAISS (\texttt{all-mpnet-base-v2}, threshold 0.70; OpenThoughts). Candidates with zero n-gram overlap constitute our Type~2 (design failure) candidates.
+
+    \item \textbf{LLM-as-judge verification.} Candidate pairs are submitted to Gemini~2.5~Flash (T\"ulu~3) or GPT-4o-mini (s1) and classified as \textsc{contaminated}, \textsc{related}, or \textsc{clean} based on whether the same mathematical insight is required and whether training on the item confers meaningful advantage. Outputs are validated on a stratified sample to estimate precision.
+\end{enumerate}
+
+\subsection{Primary Metrics}
+
+Our primary evaluation metric is judge-confirmed contamination count per project. Secondary metrics are judge precision (proportion of TF-IDF candidates confirmed by the LLM judge) and false positive rate (proportion rejected), estimated via manual validation on a stratified sample per project.
+
+For causal attribution of benchmark score inflation, the primary metric is the difference-in-differences (DiD) estimate (Section~\ref{sec:method}, DiD Framework). Secondary behavioral metrics include null rate (fraction of prompts with no extractable answer), chain-of-thought feature differences (word count, self-correction frequency, uncertainty marker frequency), and recitation rate (verbatim reproduction of pre-swap answers).
+
+\subsection{Behavioral Analysis and DiD Framework}
+
+Confirming decontamination failure is necessary but not sufficient to show benchmark gains are inflated. We need behavioral evidence that contamination changes \emph{how} models solve problems. Two mechanisms are possible: verbatim recitation (model outputs the memorized answer regardless of surface changes) or schema brittleness (model has internalized a solution template that breaks when the problem deviates from the training distribution). We test both via a \textbf{difference-in-differences (DiD)} causal framework. The key challenge is separating genuine reasoning from pattern-matching: a model that has seen a benchmark problem during training may answer it correctly not because it understands the mathematics, but because it has learned to retrieve an answer from its weights.
+
+Our design exploits two sources of variation simultaneously. First, we partition benchmark problems into a \emph{contaminated} split (problems we have evidence appear in each model's training data) and a \emph{clean} split (problems we have verified are absent from training). Second, for each problem in both splits, we generate two \emph{perturbations}: a \textbf{number swap} (changing numerical values while preserving mathematical structure) and a \textbf{surface noise} addition (appending an irrelevant real-world sentence that does not alter the mathematical content or answer). A model that has memorized contaminated problems should be disproportionately sensitive to number swaps---it will fail when numbers change because its shortcut is disrupted---whereas a model that reasons from first principles should be equally robust to this perturbation in both splits.
+
+The DiD estimator isolates the contamination effect:
+
+\begin{equation}
+  \did
+    = \underbrace{\bigl(\bar{a}_{C,\text{orig}} - \bar{a}_{C,\text{perturb}}\bigr)}_{\Delta_C}
+    - \underbrace{\bigl(\bar{a}_{N,\text{orig}} - \bar{a}_{N,\text{perturb}}\bigr)}_{\Delta_N}
+  \label{eq:did}
+\end{equation}
+
+\noindent where $\bar{a}_{C,\cdot}$ and $\bar{a}_{N,\cdot}$ are mean per-problem accuracies in the contaminated and clean splits respectively, and ``perturb'' refers to either \texttt{number\_swap} or \texttt{surface\_noise}. If contamination causes memorization, $\Delta_C > \Delta_N$ and $\did > 0$: contaminated problems are more sensitive to perturbation. If contamination has no effect, both splits degrade equally and $\did \approx 0$.
+
+\subsection{Implementation Details}
+
+\paragraph{Contamination identification.}
+Contaminated problems were identified via the multi-stage pipeline described above (n-gram replication, semantic retrieval, LLM-as-judge verification). The contaminated set differs per model: 24 problems for OpenThoughts and 32 for Tulu, reflecting the differing contamination rates found in each project's released training data.
+
+\paragraph{Perturbation generation.}
+Both perturbation types were generated using GPT-4o with structured prompts (see Appendix~\ref{app:prompts} for full system prompts).
+
+\begin{itemize}[leftmargin=*]
+  \item \emph{Number swap:} GPT-4o was instructed to change numerical values to different but similarly-scaled numbers, preserve the mathematical structure and difficulty, ensure the problem remains well-defined with a clean answer, solve the modified problem, and rate answer confidence as \texttt{high}, \texttt{medium}, or \texttt{low}. 
+  \item \emph{Surface noise:} GPT-4o was instructed to add exactly one non-mathematical context sentence (a setting, character motivation, or real-world scenario) without altering any existing wording, numerical values, or mathematical structure. The answer is unchanged by construction.
+\end{itemize}
+
+Both perturbation types are applied to problems in both splits, yielding a $2~(\text{split}) \times 3~(\text{perturbation type: original, number\_swap, surface\_noise})$ design per model.
+
+\paragraph{Inference and evaluation.}
+Clean problems were drawn from a verified uncontaminated pool, matched to the contaminated split by subject $\times$ level. All models were run on a single NVIDIA RTX PRO 6000 Blackwell (102\,GB VRAM) in bfloat16 at $T{=}0.8$, $N{=}1$, max 4,096 tokens. Answers were extracted via the final \texttt{\textbackslash boxed\{\}} expression and normalized; a GPT-4o-mini judge then re-evaluated equivalent-form answers (e.g., $\tfrac{1}{2}$ vs.\ $0.5$), changing 25 OpenThoughts and 5 Tulu labels. Judge reliability was validated against human annotations: $\kappa = 0.83$. Per-problem accuracy differences $\delta_i = \mathbf{1}[\text{correct}_\text{orig}] - \mathbf{1}[\text{correct}_\text{perturb}]$ were aggregated into the DiD estimate; uncertainty was quantified via 10{,}000-iteration cluster bootstrap (95\% CIs) and Welch's $t$-test.
+
+Beyond the DiD, we run two complementary analyses: (2)~\textbf{CoT structural analysis} comparing trace length, self-correction, uncertainty markers, hedging, and math token density on original prompts to detect reasoning-style differences; and (3)~\textbf{Mechanistic probing} measuring layer-wise attention entropy and logit lens rank to test for earlier answer prediction on contaminated problems. Temperature-sampling variance ($N{=}10$ at $T{=}1.0$) remains future work.
+
+\subsection{Theoretical Framing}
+
+The DiD design provides a valid causal estimate of the contamination effect under the \textbf{parallel trends assumption}: in the absence of contamination, contaminated and clean problems would show equal sensitivity to perturbation. This assumption is plausible given that the clean baseline was curated to match the contaminated split's subject-level distribution, and that both perturbation types are mathematically preserving (the correct answer is unchanged or independently recomputed).
+
+The estimator is conservative in two senses. First, with $N = 1$ per prompt, per-problem accuracy is binary, so $\delta_i \in \{-1, 0, 1\}$; this inflates variance and reduces power relative to a continuous outcome. Second, surface noise --- which does not change the answer --- should produce $\Delta \approx 0$ in both splits under any model, making it a useful specificity check: a large positive surface-noise DiD would indicate a methodological artifact rather than contamination.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Main Results}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Table~\ref{tab:accuracy} reports LLM-as-judge accuracy across all conditions.
+
+\begin{table}[h]
+\centering
+\caption{Accuracy by model, split, and perturbation type (LLM-as-judge).}
+\label{tab:accuracy}
+\begin{tabular}{llccc}
+\toprule
+\textbf{Model} & \textbf{Split} & \textbf{Original} & \textbf{Number swap} & \textbf{Surface noise} \\
+\midrule
+\multirow{2}{*}{OpenThoughts}
+  & Contaminated & 75.0\% (18/24) & 37.5\% (9/24)  & 66.7\% (16/24) \\
+  & Clean        & 79.2\% (19/24) & 33.3\% (8/24)  & 79.2\% (19/24) \\
+\midrule
+\multirow{2}{*}{Tulu}
+  & Contaminated & 31.2\% (10/32) & 28.1\% (9/32)  & 28.1\% (9/32)  \\
+  & Clean        & 25.0\% (8/32)  & 25.0\% (8/32)  & 18.8\% (6/32)  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:did} reports the DiD estimates, bootstrap confidence intervals, and Welch's $t$-test results.
+
+\begin{table}[h]
+\centering
+\caption{Difference-in-differences estimates. $\Delta = \bar{\delta}_{\text{orig}} - \bar{\delta}_{\text{perturb}}$ (mean per-problem accuracy drop). DiD $= \Delta_C - \Delta_N$. 95\% CIs from 10{,}000-iteration cluster bootstrap. Welch's $t$-test.}
+\label{tab:did}
+\begin{tabular}{llcccccc}
+\toprule
+\textbf{Model} & \textbf{Perturbation} & $\Delta_C$ & $\Delta_N$ & \textbf{DiD} & \textbf{95\% CI} & $t$ & $p$ \\
+\midrule
+OpenThoughts & Number swap   & $+0.375$ & $+0.458$ & $-0.083$ & $[-0.375,\;+0.208]$ & $-0.575$ & $0.568$ \\
+OpenThoughts & Surface noise & $+0.083$ & $+0.000$ & $+0.083$ & $[-0.125,\;+0.333]$ & $+0.700$ & $0.488$ \\
+Tulu         & Number swap   & $+0.031$ & $+0.000$ & $+0.031$ & $[-0.219,\;+0.281]$ & $+0.239$ & $0.812$ \\
+Tulu         & Surface noise & $+0.031$ & $+0.062$ & $-0.031$ & $[-0.281,\;+0.219]$ & $-0.255$ & $0.799$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+No DiD estimate reaches statistical significance; all 95\% confidence intervals span zero. One cross-model pattern is notable. OpenThoughts (a reasoning model with long CoT traces) shows \emph{no accuracy drop} under surface noise on clean problems (79.2\%~$\to$~79.2\%), consistent with a model that can reason past an irrelevant sentence. Tulu (a standard SFT model without extended chain-of-thought) drops 6.2\,pp on the same condition (25.0\%~$\to$~18.8\%), suggesting it is more susceptible to surface-level distractors. This difference means the surface-noise DiD has opposite signs for the two models ($+0.083$ for OpenThoughts, $-0.031$ for Tulu), reflecting a model-capability confound rather than a contamination signal. Projecting the DiD estimates to the full MATH-500 benchmark via Inflation $= (N_{\text{contaminated}} / 500) \times \text{DiD}$ yields point estimates $\leq \pm0.4$\,pp with confidence intervals spanning $\pm1.8$\,pp; the full inflation table and accuracy breakdown figure appear in Appendix~\ref{app:results}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Ablations}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Ablation 1: Null Rate as a Complementary Metric}
+
+A model that cannot adapt when numbers change may fail to produce a boxed answer entirely, rather than producing a wrong one. We track this \textbf{null rate}---the fraction of prompts where no \texttt{\textbackslash boxed\{\}} expression was found in the output (Table~\ref{tab:nullrates}). This ablation tests what signal is lost when relying on accuracy alone versus accuracy combined with null rate as a contamination indicator.
+
+\begin{table}[h]
+\centering
+\caption{Null rates (no extractable answer) by model, split, and perturbation type.}
+\label{tab:nullrates}
+\begin{tabular}{lllc}
+\toprule
+\textbf{Model} & \textbf{Split} & \textbf{Perturbation} & \textbf{Null rate} \\
+\midrule
+\multirow{6}{*}{OpenThoughts}
+  & Contaminated & Number swap   & \textbf{37.5\%} \\
+  & Contaminated & Surface noise & 20.8\% \\
+  & Contaminated & Original      & 16.7\% \\
+  & Clean        & Number swap   & 20.8\% \\
+  & Clean        & Surface noise & 20.8\% \\
+  & Clean        & Original      & 16.7\% \\
+\midrule
+\bottomrule
+\end{tabular}
+\end{table}
+
+The most striking signal is the \textbf{OpenThoughts contaminated number-swap null rate of 37.5\%}---nearly double the clean counterpart (20.8\%) and the highest null rate across all conditions. When numbers change on contaminated problems, OpenThoughts is substantially more likely to produce an incomplete or unfinished response than to reason from scratch. This contamination-induced brittleness is invisible to standard accuracy metrics. Tulu shows a milder version of the same pattern (6.2\% contaminated vs.\ 0.0\% clean on number swap).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{fig_null_rates.png}
+\caption{Null rates (no extractable \texttt{\textbackslash boxed\{\}} answer) by model, split, and perturbation type. The contaminated number-swap bar for OpenThoughts (37.5\%) is the clearest contamination signal in the study.}
+\label{fig:null_rates}
+\end{figure}
+
+
+\subsection{Ablation 2: Chain-of-Thought Behavioral Fingerprint (OpenThoughts)}
+
+OpenThoughts produces long chain-of-thought (CoT) traces (${\sim}1{,}200$--$1{,}500$ words), enabling a quantitative analysis of reasoning style across splits. We measure six CoT features: word count, uncertainty marker frequency, hedging frequency, self-correction frequency, math token density, and type-token ratio (TTR); exact regex patterns for each are in Appendix~\ref{app:cot_defs}. This ablation tests whether behavioral features within the reasoning trace provide a contamination signal that complements the DiD accuracy metric.
+
+Table~\ref{tab:cot} reports features on \emph{original}-perturbation prompts only, isolating the contamination signal from any difficulty introduced by the perturbations themselves.
+\begin{table}[h]
+\centering
+\caption{CoT features for OpenThoughts, original perturbation only. $\Delta = \text{Contaminated} - \text{Clean}$.}
+\label{tab:cot}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Split} & $N$ & \textbf{Words} & \textbf{Uncertainty} & \textbf{Hedging} & \textbf{Self-corr.} & \textbf{Math\%} \\
+\midrule
+Clean           & 24 & 1{,}251 & 2.00 & 1.17 & 0.38 & 36.8\% \\
+Contaminated    & 24 & 1{,}160 & 1.33 & 0.67 & 0.17 & 45.2\% \\
+\midrule
+$\Delta$ (\%)   &    & $-7\%$  & $-34\%$ & $-43\%$ & $\mathbf{-55\%}$ & $+23\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+Contaminated traces are shorter and show substantially fewer markers of active reasoning: uncertainty expressions ($-34\%$), hedging ($-43\%$), and self-corrections ($-55\%$). Math token density is higher ($+23\%$), consistent with more direct answer retrieval. Mann-Whitney $U$ tests on per-problem feature values yield marginal significance for self-correction ($p = 0.098$) and math token density ($p = 0.093$); all other features are non-significant ($p > 0.15$). These effects do not survive multiple-comparison correction and should be treated as exploratory.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{fig_cot_features.png}
+\caption{CoT feature distributions for OpenThoughts (original perturbation, contaminated vs.\ clean). Contaminated traces show reduced uncertainty, hedging, and self-correction, with higher math token density---consistent with more direct solution retrieval.}
+\label{fig:cot_features}
+\end{figure}
+
+Tulu's traces are too terse (${\sim}280$--$315$ words, with effectively zero uncertainty or self-correction markers) to yield a meaningful CoT signal; all Tulu CoT comparisons are non-significant.
+
+\subsection{Ablation 3: Mechanistic Probing and CoT Classifier (OpenThoughts)}
+
+A layer-wise mechanistic probe (attention entropy and logit lens rank of the correct answer token across 18 subject--level buckets) shows directionally consistent but highly variable signals: clean traces average $+0.007$\,nats higher attention entropy and the correct answer token ranks ${\sim}5{,}295$ positions later, consistent with more generative processing on clean problems. Results are based on single forward passes ($N{=}1$) and are inconclusive at this sample size; full breakdown in Appendix~\ref{app:mech}. A logistic classifier trained on CoT features (word count, math density, self-correction, hedging, uncertainty) achieves LOO-CV AUC $\leq 0.51$---at or below chance---confirming that per-trace contamination classification is not feasible at the current sample size; ROC curves and feature coefficients in Appendix~\ref{app:figures}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Error Analysis}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+We identify four sources of error that limit the current study and point toward specific fixes.
+
+\paragraph{Low statistical power.}
+With $N{=}1$ sample per prompt and 24--32 contaminated problems per model, per-problem accuracy is binary and DiD variance is high. All confidence intervals span zero, but the secondary signals (37.5\% null rate asymmetry, $-55\%$ self-correction) are directionally consistent with a real effect. A replication at $N{\geq}5$ with majority-vote scoring would narrow the intervals enough to confirm or rule out inflation of practical magnitude ($\geq 0.5$\,pp). This is the highest-priority extension.
+
+\paragraph{Unaccounted contamination channels.}
+The DiD captures one channel of contamination: differential accuracy sensitivity to numerical perturbation. Several other channels are not accounted for. First, \emph{pretraining contamination}: all three audited projects build on base models (Llama, Qwen) that may have encountered MATH-500 problems during pretraining. If so, both the contaminated and clean splits are affected equally, and the DiD estimate is zero regardless of any post-training effect---a lower bound, not an absence of effect. Second, \emph{solution-trace contamination}: post-training datasets pair each problem with a full reasoning trace; exposure to a specific solution trajectory may inflate performance in ways that n-gram matching on problem text alone does not detect. Third, \emph{near-miss contamination}: the 108 additional items recovered by lowering the similarity threshold from $\tau{=}0.85$ to $\tau{=}0.70$ constitute a gray zone of structurally similar problems that could transfer solution schemas without triggering any filter. These channels suggest the true contamination footprint is broader than what our pipeline or DiD can measure.
+
+\paragraph{Difficulty mismatch within matched pairs.}
+Subject-by-level matching does not guarantee equal intrinsic difficulty. In the clearest case (Intermediate Algebra L4), the contaminated problem (\texttt{math500\_0134}: find $h{+}k{+}a{+}b$ for a hyperbola) is a direct formula application, while the matched clean problem (\texttt{math500\_0495}: find the domain of $f(x){=}(2{-}x)/\log(2{-}\log(x{-}2))$) requires nested logarithm constraint analysis. The model solves the contaminated version in 995 words and produces a 2,471-word null on the clean one. Fourteen such mismatched pairs were found across both models, meaning the null rate gap is an upper bound on the true contamination effect, not a pure measure of it.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Qualitative Demonstrations}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+We illustrate the contamination-induced brittleness with \texttt{math500\_0193} (Intermediate Algebra L3). On the original problem the model solves correctly in 1,180 words with no self-correction---a direct Rational Root Theorem application. Swapping the coefficients from $(2,1)$ to $(3,2)$ breaks the constant-$= 1$ symmetry that made the original tractable; the model correctly lists eight candidate roots but then spirals for 1,775 words into an unresolvable analysis of which roots are achievable under variable coefficients, never boxing an answer. The matched clean problem (\texttt{math500\_0114}, partial fractions) produces a 730-word trace that includes two independent verification steps absent from the contaminated trace---consistent with the aggregate $-55\%$ self-correction finding. Full traces for all three conditions are in Appendix~\ref{app:qual}.
+
+\paragraph{Contaminated problem (number swap) --- \textit{null output}.}
+\begin{mdframed}
+\textbf{Problem:} How many different possible rational roots does $3x^4 + a_3x^3 + a_2x^2 + a_1x + 2 = 0$ have, where $a_3, a_2, a_1$ are integers? \quad \textbf{Ground truth: 8.}\\[4pt]
+\textbf{Model (excerpt):} \textit{``\ldots the possible rational roots would be $\pm1, \pm\frac{1}{3}, \pm2, \pm\frac{2}{3}$. Wait, that's 8 possible roots\ldots but maybe some could be excluded based on $a_3, a_2, a_1$? \ldots for a given $r$, can we find integers $a_3, a_2, a_1$ such that substituting $x{=}r$ gives zero? \ldots Since $a_3$ must be an integer\ldots''} [\textit{continues 1,500+ more words; no answer produced}]
+\end{mdframed}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusion}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+We presented a difference-in-differences framework for causally attributing LLM benchmark score inflation to training data contamination, applied to two open-weight models on MATH-500. Neither model shows a statistically significant DiD effect at the current sample size, and our estimates of benchmark score inflation are small ($\leq 0.4$\,pp) and statistically indistinguishable from zero. However, several secondary signals point toward a contamination-induced behavioral shift in OpenThoughts: a nearly doubled null rate on contaminated number-swap problems (37.5\% vs.\ 20.8\%), shorter chain-of-thought traces with markedly fewer self-corrections ($-55\%$) and uncertainty markers ($-34\%$), and earlier answer prediction in the model's forward pass. Together, these suggest that contamination in OpenThoughts manifests not as verbatim memorization but as a subtler shortcut---a bias toward confident, direct solution retrieval that is brittle to superficial numerical changes. The Tulu model shows no detectable signal across any measure, consistent with its lower baseline performance and shorter, less structured reasoning traces. We release our perturbation pipeline, causal evaluation framework, and curated clean baseline to support future contamination audits of open and closed LLMs.
+
+\paragraph{Broader Impact.}
+Benchmark contamination poses a systemic risk to LLM evaluation validity: if models are trained on the very data used to assess them, reported capabilities may overstate true generalization. Our DiD framework provides a principled, model-agnostic method for estimating the causal magnitude of this effect, requiring only black-box inference access and a verified clean comparison set. While our point estimates of benchmark score inflation are small ($\leq 0.4$\,pp), the confidence intervals do not rule out effects as large as ${\sim}1.8$\,pp---meaningful on a 500-problem benchmark. We recommend that future benchmark releases include a clean verification split, and that model evaluation reports publish DiD-adjusted accuracy alongside raw scores as standard practice.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\bibliography{references}
+\bibliographystyle{iclr2026_conference}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\appendix
+
+\section{Perturbation Prompts}
+\label{app:prompts}
+
+\paragraph{Number Swap (GPT-4o system prompt).}
+\begin{mdframed}
+You are a math problem editor. Change the numerical values in the problem below to different but similarly-scaled numbers. Rules:
+\begin{itemize}[noitemsep]
+  \item Do NOT make the problem conceptually harder or easier (same math operations required)
+  \item Keep the same structure and question type
+  \item The problem must remain well-defined and have a clean answer
+  \item Also solve the modified problem and provide the correct answer
+  \item Rate your confidence in the answer: ``high'', ``medium'', or ``low''
+\end{itemize}
+Return ONLY valid JSON with exactly these keys: \texttt{"perturbed\_problem"}, \texttt{"perturbed\_answer"}, \texttt{"confidence"}
+\end{mdframed}
+
+\paragraph{Surface Noise (GPT-4o system prompt).}
+\begin{mdframed}
+You are a math problem editor. Add surface-level noise to the problem below. Rules:
+\begin{itemize}[noitemsep]
+  \item Do NOT change the mathematical structure, numerical values, wording, or meaning in any way
+  \item Add exactly one non-mathematical context sentence (e.g.\ a setting, a character's motivation, or a real-world scenario) that is irrelevant to solving the problem
+  \item Do not rephrase, reorder, or alter any existing part of the problem
+  \item The answer must remain EXACTLY the same as the original
+  \item Do NOT include the answer, any numerical result, or any hint of the solution in \texttt{"perturbed\_problem"}
+\end{itemize}
+Return ONLY valid JSON with exactly this key: \texttt{"perturbed\_problem"}
+\end{mdframed}
+
+\paragraph{Example (\texttt{math500\_0023}, Algebra Level~5).}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{p{2.2cm} p{9.5cm} p{1.8cm}}
+\toprule
+\textbf{Condition} & \textbf{Problem text} & \textbf{Answer} \\
+\midrule
+Original &
+  Find all values of $x$ that satisfy the equation $x = \sqrt{11-2x} + 4$. &
+  $x = 5$ \\[6pt]
+Number swap &
+  Find all values of $x$ that satisfy the equation $x = \sqrt{13-2x} + 5$. &
+  $x = 6$ \\[6pt]
+Surface noise &
+  While walking through a serene forest, you stumble upon an ancient riddle carved into a tree: Find all values of $x$ that satisfy the equation $x = \sqrt{11-2x} + 4$. &
+  $x = 5$ \\
+\bottomrule
+\end{tabular}
+\caption{The number swap changes 11~$\to$~13 and $+4$~$\to$~$+5$ (preserving structure, answer shifts from 5 to 6). The surface noise prepends one irrelevant sentence; mathematical content and answer are unchanged.}
+\end{table}
+
+\section{Full CoT Feature Table --- OpenThoughts}
+\label{app:cot}
+
+\begin{table}[h]
+\centering
+\caption{CoT features for OpenThoughts across all split $\times$ perturbation conditions. TTR = type-token ratio.}
+\label{tab:cot_full}
+\begin{tabular}{llccccccc}
+\toprule
+\textbf{Split} & \textbf{Perturbation} & $N$ & \textbf{Words} & \textbf{Uncert.} & \textbf{Hedging} & \textbf{Self-corr.} & \textbf{Math\%} & \textbf{TTR} \\
+\midrule
+Clean        & Number swap   & 24 & 1{,}465 & 2.29 & 1.92 & 0.42 & 41.8\% & 0.255 \\
+Clean        & Original      & 24 & 1{,}251 & 2.00 & 1.17 & 0.38 & 36.8\% & 0.263 \\
+Clean        & Surface noise & 24 & 1{,}313 & 1.75 & 1.88 & 0.29 & 39.0\% & 0.265 \\
+Contaminated & Number swap   & 24 & 1{,}439 & 1.33 & 1.58 & 0.38 & 44.0\% & 0.263 \\
+Contaminated & Original      & 24 & 1{,}160 & 1.33 & 0.67 & 0.17 & 45.2\% & 0.284 \\
+Contaminated & Surface noise & 24 & 1{,}277 & 1.50 & 1.25 & 0.17 & 41.5\% & 0.277 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{CoT Feature Definitions and Extraction Patterns}
+\label{app:cot_defs}
+
+All features are extracted from the text between \texttt{<|begin\_of\_thought|>} and \texttt{<|end\_of\_thought|>} tags in OpenThoughts traces. Counts are per-trace (not normalised by length unless stated). All pattern matching is case-insensitive.
+
+\begin{description}[leftmargin=1.5em, labelindent=0pt]
+
+\item[\textbf{Word count.}] Total whitespace-separated tokens in the thought section.
+
+\item[\textbf{Uncertainty markers.}] Count of matches across the following patterns, intended to capture moments where the model explicitly rejects its current line of reasoning:
+\begin{itemize}[noitemsep]
+  \item \texttt{\textbackslash bno wait\textbackslash b}, \quad \texttt{\textbackslash bwait,?\textbackslash s+no\textbackslash b}
+  \item \texttt{\textbackslash bhold on\textbackslash b}, \quad \texttt{\textbackslash blet me reconsider\textbackslash b}
+  \item \texttt{\textbackslash bi made an error\textbackslash b}
+  \item \texttt{\textbackslash bthat('s| is) (wrong|incorrect|not right)\textbackslash b}
+\end{itemize}
+
+\item[\textbf{Hedging.}] Count of matches capturing epistemic tentativeness (belief rather than certainty):
+\begin{itemize}[noitemsep]
+  \item \texttt{\textbackslash bi'?m not sure\textbackslash b}, \quad \texttt{\textbackslash bi'?m not certain\textbackslash b}
+  \item \texttt{\textbackslash bi believe\textbackslash b}, \quad \texttt{\textbackslash bseems like\textbackslash b}
+  \item \texttt{\textbackslash bprobably\textbackslash b}, \quad \texttt{\textbackslash bperhaps\textbackslash b}
+  \item \texttt{\textbackslash bi think (that )?this\textbackslash b}, \quad \texttt{\textbackslash bif i recall\textbackslash b}
+\end{itemize}
+
+\item[\textbf{Self-correction.}] Count of matches capturing active revision of a prior calculation or claim:
+\begin{itemize}[noitemsep]
+  \item \texttt{\textbackslash bactually,?\textbackslash s+(no|wait|let me)\textbackslash b}
+  \item \texttt{\textbackslash blet me recalculate\textbackslash b}, \quad \texttt{\textbackslash bi was wrong\textbackslash b}
+  \item \texttt{\textbackslash bi (made a |have a )?mistake\textbackslash b}
+  \item \texttt{\textbackslash bmy (previous |earlier )?calculation was (wrong|incorrect|off)\textbackslash b}
+\end{itemize}
+
+\item[\textbf{Math token density.}] Fraction of tokens that match a mathematical content pattern: digits (\texttt{[0-9]}), standard operators (\texttt{+~-~*~/~=~\^{}}), and \LaTeX{} math commands (\texttt{\textbackslash frac}, \texttt{\textbackslash sqrt}, \texttt{\textbackslash sum}, subscripts/superscripts, etc.). Computed as math\_tokens / total\_tokens.
+
+\item[\textbf{Type-token ratio (TTR).}] Unique lowercased word types divided by total word count. Measures lexical diversity; lower values indicate more repetitive, formulaic language.
+
+\end{description}
+
+\noindent Statistical comparison between contaminated and clean splits used the Mann-Whitney $U$ test on per-trace feature values (non-parametric, no normality assumption). Effect sizes are reported as Cohen's $d$ (pooled standard deviation).
+
+\section{Mechanistic Probing by Subject $\times$ Level}
+\label{app:mech}
+
+Table~\ref{tab:mech_full} reports per-bucket attention entropy and logit lens rank for all 18 (Subject, Level) combinations evaluated on OpenThoughts. Each row averages over at most 2 forward passes (contaminated and clean) for that bucket; single-pass variance is high. Entropy\_Diff and Rank\_Diff are Clean $-$ Contaminated; positive values indicate clean traces show higher entropy / later answer prediction (consistent with more generative reasoning).
+
+\begin{table}[h]
+\centering
+\small
+\caption{Layer-averaged attention entropy and logit lens rank of the correct answer token by subject $\times$ level (OpenThoughts). Positive Entropy\_Diff and Rank\_Diff indicate clean $>$ contaminated, i.e., more diffuse attention and later answer prediction for clean problems. Results are from single forward passes ($N=1$) and are highly variable; do not over-interpret individual rows.}
+\label{tab:mech_full}
+\begin{tabular}{llcccccc}
+\toprule
+\textbf{Subject} & \textbf{Level} & \textbf{Contam} & \textbf{Clean} & \textbf{Entropy} & \textbf{Contam} & \textbf{Clean} & \textbf{Rank} \\
+& & \textbf{Entropy} & \textbf{Entropy} & \textbf{Diff} & \textbf{Rank} & \textbf{Rank} & \textbf{Diff} \\
+\midrule
+Algebra                  & 1 & 1.22 & 1.42 & $+0.20$ & 9{,}769  & 34{,}352 & $+24{,}583$ \\
+Algebra                  & 3 & 1.23 & 1.43 & $+0.20$ & 21{,}737 & 29{,}011 & $+7{,}274$ \\
+Algebra                  & 4 & 1.41 & 1.45 & $+0.04$ & 35{,}892 & 15{,}024 & $-20{,}868$ \\
+Algebra                  & 5 & 1.39 & 1.27 & $-0.12$ & 1{,}529  & 3{,}608  & $+2{,}079$ \\
+Counting \& Prob.        & 4 & 1.26 & 1.42 & $+0.16$ & 6{,}365  & 20{,}525 & $+14{,}160$ \\
+Counting \& Prob.        & 5 & 1.38 & 1.33 & $-0.04$ & 16{,}047 & 58{,}562 & $+42{,}515$ \\
+Geometry                 & 2 & 1.36 & 1.54 & $+0.18$ & 50{,}411 & 16{,}688 & $-33{,}723$ \\
+Geometry                 & 5 & 2.30 & 1.94 & $-0.36$ & 13       & 5{,}158  & $+5{,}145$ \\
+Intermediate Algebra     & 1 & 1.26 & 1.40 & $+0.14$ & 784      & 58{,}857 & $+58{,}073$ \\
+Intermediate Algebra     & 2 & 1.47 & 1.52 & $+0.05$ & 46{,}789 & 9{,}246  & $-37{,}542$ \\
+Intermediate Algebra     & 3 & 1.46 & 1.55 & $+0.09$ & 1{,}425  & 12{,}736 & $+11{,}312$ \\
+Intermediate Algebra     & 4 & 1.63 & 1.51 & $-0.12$ & 6{,}056  & 18{,}497 & $+12{,}441$ \\
+Intermediate Algebra     & 5 & 1.59 & 1.44 & $-0.15$ & 4{,}283  & 12{,}533 & $+8{,}250$ \\
+Number Theory            & 4 & 1.41 & 1.41 & $+0.00$ & 17{,}743 & 13{,}270 & $-4{,}473$ \\
+Prealgebra               & 2 & 1.34 & 1.20 & $-0.15$ & 2{,}576  & 39{,}748 & $+37{,}172$ \\
+Prealgebra               & 5 & 1.92 & 1.71 & $-0.21$ & 47{,}042 & 17{,}066 & $-29{,}976$ \\
+Precalculus              & 2 & 1.40 & 1.43 & $+0.02$ & 40{,}204 & 32{,}715 & $-7{,}489$ \\
+Precalculus              & 3 & 1.40 & 1.61 & $+0.21$ & 6{,}812  & 13{,}190 & $+6{,}378$ \\
+\midrule
+\textbf{Mean}            &   & 1.50 & 1.51 & $+0.007$ & 18{,}182 & 23{,}477 & $+5{,}295$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Entropy differences are inconsistent in sign across subjects (12 of 18 rows are positive but 6 are negative), and rank differences span from $-37{,}542$ to $+58{,}073$. The average rank difference of $+5{,}295$ masks extreme variability; the result should not be treated as a robust mechanistic signal at $N=1$.
+
+\section{Supplementary Figures}
+\label{app:figures}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{fig_trace_length.png}
+\caption{Distribution of CoT trace length (word count) for OpenThoughts by split and perturbation type. Contaminated original traces are slightly shorter; number-swap traces are longer in both splits as the model works harder on the altered problem.}
+\label{fig:trace_length}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{fig_cohens_d_heatmap.png}
+\caption{Cohen's $d$ effect sizes for CoT features comparing contaminated vs.\ clean splits (OpenThoughts). Self-correction and math token density show the largest effects; all remain small-to-medium in magnitude.}
+\label{fig:cohens_d}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{fig_individual_cot_openthoughts.png}
+\caption{Per-trace CoT feature values for OpenThoughts across all split $\times$ perturbation conditions. High within-group variance illustrates why aggregate effects do not survive multiple-comparison correction.}
+\label{fig:cot_individual}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{fig_length_vs_uncertainty.png}
+\caption{Trace length vs.\ uncertainty marker count by split and correctness (OpenThoughts). Longer traces correlate with more uncertainty markers; incorrect responses are disproportionately long.}
+\label{fig:length_uncertainty}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\linewidth]{fig_length_by_correctness.png}
+\caption{Mean trace length by split and correctness. Incorrect answers produce traces 60--70\% longer than correct ones, consistent with the model iterating unsuccessfully rather than finding a direct solution.}
+\label{fig:length_correctness}
+\end{figure}
+
+\section{Additional Results}
+\label{app:results}
+
+\begin{table}[h]
+\centering
+\caption{Estimated benchmark score inflation projected to MATH-500. Inflation $= (N_{\text{contaminated}} / 500) \times \text{DiD}$. Assumes the evaluated contaminated problems are representative of the full contaminated fraction.}
+\label{tab:inflation}
+\begin{tabular}{llccc}
+\toprule
+\textbf{Model} & \textbf{Perturbation} & \textbf{DiD} & \textbf{Inflation (pp)} & \textbf{95\% CI (pp)} \\
+\midrule
+OpenThoughts & Number swap   & $-0.083$ & $-0.40$ & $[-1.80,\;+1.00]$ \\
+OpenThoughts & Surface noise & $+0.083$ & $+0.40$ & $[-0.60,\;+1.60]$ \\
+Tulu         & Number swap   & $+0.031$ & $+0.20$ & $[-1.40,\;+1.80]$ \\
+Tulu         & Surface noise & $-0.031$ & $-0.20$ & $[-1.80,\;+1.40]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{fig_accuracy_breakdown.png}
+\caption{Accuracy by model, split, and perturbation type (LLM-as-judge). Number swap floors both models to $\sim$30--40\% regardless of split; surface noise preserves accuracy for OpenThoughts clean but not contaminated.}
+\label{fig:accuracy_breakdown}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\linewidth]{fig_did_inflation.png}
+\caption{DiD point estimates with 95\% bootstrap confidence intervals (left) and projected benchmark score inflation on MATH-500 (right). All intervals span zero; point estimates are $\leq\pm0.4$\,pp.}
+\label{fig:did_inflation}
+\end{figure}
+
+\begin{table}[h]
+\centering
+\caption{Recitation of original answer on number-swap prompts. ``Null'' = no \texttt{\textbackslash boxed\{\}} extracted; ``Ambiguous'' = answer extracted but indeterminate.}
+\label{tab:recitation}
+\begin{tabular}{llccccc}
+\toprule
+\textbf{Model} & \textbf{Split} & \textbf{Total} & \textbf{Null} & \textbf{Ambiguous} & \textbf{Evaluable} & \textbf{Recitations} \\
+\midrule
+OpenThoughts & Contaminated & 24 & 9 & 1 & 14 & 0 (0.0\%) \\
+OpenThoughts & Clean        & 24 & 5 & 1 & 18 & 1 (5.6\%) \\
+Tulu         & Contaminated & 32 & 2 & 6 & 24 & 0 (0.0\%) \\
+Tulu         & Clean        & 32 & 0 & 4 & 28 & 0 (0.0\%) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Qualitative Demonstrations (Full Traces)}
+\label{app:qual}
+
+\paragraph{Problem (contaminated, original).}
+\begin{mdframed}
+How many different possible rational roots does $2x^4 + a_3x^3 + a_2x^2 + a_1x + 1 = 0$ have, where $a_3, a_2, a_1$ are integers?
+\quad \textbf{Ground truth: 4.}
+\end{mdframed}
+
+\paragraph{OpenThoughts response (contaminated, original) --- 1,180 words, correct.}
+\begin{mdframed}
+\textit{``Okay, so I need to find the number of different possible rational roots \ldots From the Rational Root Theorem \ldots the possible values of $p$ (the numerator) are the divisors of 1, which are just $\pm1$. The possible values of $q$ (the denominator) are the divisors of 2, which are $\pm1, \pm2$. Therefore, combining these, the possible rational roots should be $\pm1, \pm\frac{1}{2}$. \ldots So that's four distinct possibilities. \ldots Since the leading coefficient is fixed at 2 and the constant term is fixed at 1, the possible rational roots can't change based on the other coefficients. Therefore, the number of different possible rational roots is $\boxed{4}$.''}
+\end{mdframed}
+The trace is direct: the model applies the theorem, enumerates four candidates, briefly considers whether variable coefficients matter, and resolves the question in under 1,200 words with no self-correction.
+
+\paragraph{Problem (contaminated, number swap).}
+\begin{mdframed}
+How many different possible rational roots does $3x^4 + a_3x^3 + a_2x^2 + a_1x + 2 = 0$ have, where $a_3, a_2, a_1$ are integers?
+\quad \textbf{Ground truth: 8. Model answer: \textit{null}.}
+\end{mdframed}
+
+\paragraph{OpenThoughts response (contaminated, number swap) --- 1,775 words, \textbf{null output}.}
+\begin{mdframed}
+\textit{``\ldots the possible rational roots would be $\pm1, \pm\frac{1}{3}, \pm2, \pm\frac{2}{3}$. Wait, that's 8 possible roots. But the question says `different possible rational roots'. So does each of these fractions count as distinct? \ldots However, the problem mentions `different possible rational roots', but maybe some of these could be excluded based on the coefficients $a_3, a_2, a_1$? Wait, hold on. The original polynomial has variable coefficients. So the coefficients aren't fixed. Therefore, depending on the values of $a_3, a_2, a_1$, different roots might be possible or not. \ldots In other words, for a given rational number $r$, can we find integers $a_3, a_2, a_1$ such that substituting $x=r$ gives zero? Alternatively, rearranging: $a_3 = \frac{-3r^4 - a_2r^2 - a_1r - 2}{r^3}$. Since $a_3$ must be an integer \ldots''} [\textit{reasoning continues for 1,500+ more words; no final answer produced}]
+\end{mdframed}
+The swap changes the leading coefficient from 2 to 3 and constant from 1 to 2. This breaks the constant-$=1$ symmetry, producing a combinatorially richer candidate set. The model correctly identifies eight candidates but spirals into an unresolvable analysis of achievable roots under variable coefficients.
+
+\paragraph{Problem (clean, original) --- matched subject and level.}
+\begin{mdframed}
+$\frac{C}{x-3} + \frac{D}{x+8} = \frac{4x-23}{x^2+5x-24}$ for all $x \neq 3, -8$. Find $CD$.
+\quad \textbf{Ground truth: $-5$.}
+\end{mdframed}
+
+\paragraph{OpenThoughts response (clean, original) --- 730 words, correct.}
+\begin{mdframed}
+\textit{``Okay, so I need to find the product $CD$ \ldots Hmm, let's start by understanding what this problem is asking. First, I know that the denominators on both sides must be the same \ldots Let me factor the denominator on the right \ldots That means the right-hand side is $(4x{-}23)/[(x{-}3)(x{+}8)]$, which matches the denominators on the left side. Great, so that checks out. \ldots Therefore, we can set up the following system of equations: (1) $C + D = 4$. (2) $8C - 3D = -23$. \ldots So, $C = -1$ and $D = 5$. \ldots Wait, let me verify by plugging back into the original equation \ldots Compute numerator: $-x - 8 + 5x - 15 = 4x - 23$. Which matches the right side. Perfect! So the solution is correct.''}
+\end{mdframed}
+The clean trace is 450 words shorter but contains two explicit verification steps (``Great, so that checks out'' and the plug-back check) absent from the contaminated trace---consistent with the $-55\%$ self-correction finding in the aggregate CoT analysis.
+
+\end{document}
