@@ -1,0 +1,42 @@
+# Model registry. Used by inference + judge + perturbation scripts.
+
+# LLM-as-judge models (Stage 3 of detection pipeline).
+judges:
+  default:
+    provider: openai
+    model: gpt-4o-mini
+    used_for: [s1, openthoughts, openthoughts_full]
+  strict:
+    provider: openai
+    model: gpt-4o-mini
+    used_for: [tulu]
+    prompt: judge_strict
+
+# Answer-equivalence judges (used by scripts/08_score_answers.py).
+answer_judges:
+  openai:
+    provider: openai
+    model: gpt-4o-mini
+  anthropic:
+    provider: anthropic
+    model: claude-haiku-4-5-20251001
+
+# Perturbation generator (Section 5.5).
+perturbation_generator:
+  provider: openai
+  model: gpt-4o
+
+# Inference models for the DiD experiment (Table 3 of the paper).
+inference_models:
+  - name: openthinker
+    hf_id: open-thoughts/OpenThinker-7B
+    precision: bfloat16
+    max_new_tokens: 4096
+    temperature: 0.8
+    n_samples: 1
+  - name: tulu
+    hf_id: allenai/Llama-3.1-Tulu-3-8B-SFT
+    precision: bfloat16
+    max_new_tokens: 4096
+    temperature: 0.8
+    n_samples: 1

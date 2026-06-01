@@ -1,0 +1,42 @@
+# Threshold configuration for the contamination detection pipeline.
+# Values reflect what produced the paper's headline numbers (Table 2).
+# Override any subset via `--config configs/thresholds.yaml` on the relevant script.
+
+seed: 42
+
+ngram:
+  s1:
+    n: 8
+    threshold_mode: any
+  tulu:
+    n: 8
+    threshold_mode: percent
+    coverage: 0.5
+  openthoughts:
+    n: 13
+    threshold_mode: any
+  openthoughts_full:
+    n: 13
+    threshold_mode: any
+
+embedding:
+  model: all-mpnet-base-v2
+  sim_threshold: 0.70
+  top_k: 5
+  batch_size: 32
+  chunk_size: 5000
+  embed_dim: 768
+
+judge:
+  model: gpt-4o-mini
+  max_retries: 3
+  timeout_seconds: 30
+  max_tokens: 300
+  temperature: 0.0
+  truncate_chars: 1500
+  rate_limit_sleep: 0.1
+
+stats:
+  n_bootstrap: 10000
+  alpha: 0.05
+  seed: 42

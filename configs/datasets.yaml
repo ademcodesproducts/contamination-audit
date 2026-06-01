@@ -1,0 +1,41 @@
+# Dataset registry. Each entry lists HuggingFace IDs in priority order
+# (the loader falls back through the list on auth or rename failures) and the
+# canonical local jsonl path under data/raw/.
+
+math500:
+  hf_ids:
+    - HuggingFaceH4/MATH-500
+    - TIGER-Lab/MATH-500
+  split: test
+  local: data/raw/math500.jsonl
+
+s1:
+  hf_ids:
+    - simplescaling/s1K
+    - simplescaling/s1k
+  split: train
+  local: data/raw/s1k.jsonl
+
+tulu:
+  # Use the small numinamath subset by default; fall back to the full mixture
+  # and filter to math sources (gsm8k, numina, metamath, etc.).
+  hf_ids:
+    - ai2-adapt-dev/numinamath_tir_math_decontaminated
+    - allenai/tulu-3-sft-mixture
+  split: train
+  local: data/raw/tulu_math.jsonl
+
+openthoughts:
+  hf_ids:
+    - open-thoughts/OpenThoughts-114k
+  split: train
+  local: data/raw/openthoughts.jsonl
+  sample_size: 20000     # reproducible 20k sample with seed=42
+  sample_seed: 42
+
+openthoughts_full:
+  hf_ids:
+    - open-thoughts/OpenThoughts-114k
+  split: train
+  local: data/raw/openthoughts_full.jsonl
+  sample_size: null      # use all 113,957 items (Table 2's headline row)
