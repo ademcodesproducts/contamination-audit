@@ -1,18 +1,21 @@
 # Model registry. Used by inference + judge + perturbation scripts.
 
 # LLM-as-judge models (Stage 3 of detection pipeline).
+# Provider switches live in configs/thresholds.yaml under `judges.*`.
 judges:
   default:
-    provider: openai
-    model: gpt-4o-mini
     used_for: [s1, openthoughts, openthoughts_full]
+    prompt: judge_default
   strict:
-    provider: openai
-    model: gpt-4o-mini
-    used_for: [tulu]
+    used_for: []                              # invoke with --judge strict for Tulu re-judge
     prompt: judge_strict
+  tulu:
+    used_for: [tulu]
+    prompt: judge_tulu                        # instance/template/clean scheme
 
 # Answer-equivalence judges (used by scripts/08_score_answers.py).
+# NOTE: paper §5.4 says GPT-4o-mini; the teammate src/06 uses Vertex/Gemini.
+# Confirm with co-authors which model produced the numbers in Tables 3-4.
 answer_judges:
   openai:
     provider: openai
@@ -20,6 +23,9 @@ answer_judges:
   anthropic:
     provider: anthropic
     model: claude-haiku-4-5-20251001
+  vertex:
+    provider: vertex
+    model: gemini-2.5-flash
 
 # Perturbation generator (Section 5.5).
 perturbation_generator:
@@ -27,8 +33,10 @@ perturbation_generator:
   model: gpt-4o
 
 # Inference models for the DiD experiment (Table 3 of the paper).
+# Each entry's `name` is the short alias used in trace filenames and the
+# `dataset` column of contaminated_and_perturbations.csv (used for routing).
 inference_models:
-  - name: openthinker
+  - name: openthoughts
     hf_id: open-thoughts/OpenThinker-7B
     precision: bfloat16
     max_new_tokens: 4096
@@ -36,6 +44,12 @@ inference_models:
     n_samples: 1
   - name: tulu
     hf_id: allenai/Llama-3.1-Tulu-3-8B-SFT
+    precision: bfloat16
+    max_new_tokens: 4096
+    temperature: 0.8
+    n_samples: 1
+  - name: s1
+    hf_id: simplescaling/s1.1-7B
     precision: bfloat16
     max_new_tokens: 4096
     temperature: 0.8

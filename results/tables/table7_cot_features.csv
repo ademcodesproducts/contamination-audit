@@ -1,0 +1,16 @@
+model,metric,clean_mean,contam_mean,U,p,cohens_d,sig
+openthoughts,word_count,1008.0,1159.583,168.0,0.0919,-0.27,~
+openthoughts,uncertainty,1.65,1.333,219.0,0.6037,0.13,ns
+openthoughts,hedging,0.8,0.667,236.0,0.9254,0.1,ns
+openthoughts,self_correction,0.25,0.167,275.0,0.2008,0.17,ns
+openthoughts,math_density,0.403,0.452,191.0,0.253,-0.29,ns
+s1,word_count,604.95,679.75,17.0,0.0811,-0.85,~
+s1,uncertainty,0.95,0.75,42.5,0.8674,0.19,ns
+s1,hedging,1.55,2.0,34.5,0.69,-0.29,ns
+s1,self_correction,0.05,0.0,42.0,0.7373,0.25,ns
+s1,math_density,0.354,0.27,50.0,0.4771,0.5,ns
+tulu,word_count,364.7,292.938,420.5,0.06,0.48,~
+tulu,uncertainty,0.0,0.0,320.0,1.0,0.0,ns
+tulu,hedging,0.05,0.0,336.0,0.2204,0.36,ns
+tulu,self_correction,0.0,0.0,320.0,1.0,0.0,ns
+tulu,math_density,0.425,0.446,295.0,0.6449,-0.11,ns

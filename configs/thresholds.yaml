@@ -19,6 +19,15 @@ ngram:
     n: 13
     threshold_mode: any
 
+# Stage 2 retrieval method per project. Paper §5.1:
+#   "TF-IDF cosine similarity (Tülu 3) or dense sentence embeddings
+#    (FAISS all-mpnet-base-v2, threshold 0.75–0.85; OpenThoughts)."
+retrieval:
+  s1:                {method: dense}
+  tulu:              {method: tfidf}
+  openthoughts:      {method: dense}
+  openthoughts_full: {method: dense}
+
 embedding:
   model: all-mpnet-base-v2
   sim_threshold: 0.70
@@ -27,14 +36,38 @@ embedding:
   chunk_size: 5000
   embed_dim: 768
 
-judge:
-  model: gpt-4o-mini
-  max_retries: 3
-  timeout_seconds: 30
-  max_tokens: 300
-  temperature: 0.0
-  truncate_chars: 1500
-  rate_limit_sleep: 0.1
+# Multiple judges available; scripts select by name. The teammate Tulu pipeline
+# uses Vertex/Gemini; the s1 + OpenThoughts pipelines use OpenAI.
+# (Note: paper §5.4 says GPT-4o-mini for the equivalence re-judge — confirm
+# with co-authors before publication; the teammate src/06 currently uses Gemini.)
+judges:
+  default:
+    provider: openai
+    model: gpt-4o-mini
+    max_retries: 3
+    timeout_seconds: 30
+    max_tokens: 300
+    temperature: 0.0
+    truncate_chars: 1500
+    rate_limit_sleep: 0.1
+  strict:
+    provider: openai
+    model: gpt-4o-mini
+    max_retries: 3
+    timeout_seconds: 30
+    max_tokens: 300
+    temperature: 0.0
+    truncate_chars: 1500
+    rate_limit_sleep: 0.1
+  tulu:
+    provider: vertex
+    model: gemini-2.5-flash
+    max_retries: 3
+    timeout_seconds: 30
+    max_tokens: 1024
+    temperature: 0.0
+    truncate_chars: 1500
+    rate_limit_sleep: 4.0       # 15 req/min on Google AI Studio free tier
 
 stats:
   n_bootstrap: 10000

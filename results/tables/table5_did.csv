@@ -1,0 +1,7 @@
+model,perturbation_type,n_contaminated,n_clean,delta_C,delta_N,did,ci_low,ci_high,t,p,inflation_pp
+openthoughts,number_swap,24,20,0.3333,0.45,-0.1167,-0.4417,0.2083,-0.6743,0.5038,-0.56
+openthoughts,surface_noise,24,20,-0.0417,0.05,-0.0917,-0.3083,0.1167,-0.8554,0.3982,-0.44
+tulu,number_swap,32,20,0.0312,-0.05,0.0813,-0.125,0.2939,0.7563,0.4534,0.52
+tulu,surface_noise,32,20,0.0625,0.0,0.0625,-0.0938,0.2188,0.7015,0.4882,0.4
+s1,number_swap,4,20,0.0,0.1,-0.1,-0.25,0.0,-1.453,0.1625,-0.08
+s1,surface_noise,4,20,0.0,0.0,0.0,-0.15,0.15,0.0,1.0,0.0

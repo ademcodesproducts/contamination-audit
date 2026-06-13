@@ -1,0 +1,7 @@
+model,split,recited,correct,neither,null,ambiguous,total,recitation_rate
+openthoughts,clean,0,4,12,3,1,20,0.0
+openthoughts,contaminated,0,6,8,9,1,24,0.0
+s1,clean,0,0,0,20,0,20,
+s1,contaminated,0,0,0,4,0,4,
+tulu,clean,0,1,12,5,2,20,0.0
+tulu,contaminated,0,6,18,2,6,32,0.0

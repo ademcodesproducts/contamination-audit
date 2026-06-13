@@ -1,8 +1,13 @@
-"""Stage 3: LLM-as-judge verifies embedding candidates.
+"""Stage 3: LLM-as-judge verifies retrieval candidates.
 
-Classifies each candidate pair as CONTAMINATED / RELATED / CLEAN. Default prompt
-is the lenient version used in the paper for s1 and OpenThoughts; ``--strict``
-swaps to the step-for-step prompt used for the Tulu re-judge (Section 7).
+Each project uses its paper-specified judge by default (configurable per project
+under ``judges`` in ``configs/thresholds.yaml``):
+
+  s1, OpenThoughts → ``judges.default`` (GPT-4o-mini + judge_default prompt)
+  Tülu 3           → ``judges.tulu``   (Gemini 2.5 Flash via Vertex + judge_tulu prompt)
+
+Pass ``--judge <name>`` to override (e.g. ``--judge strict`` for the
+step-for-step Tülu re-judge described in paper §7).
 
 Resumes automatically from the existing output file.
 
@@ -29,9 +34,18 @@ _log = logging.getLogger("llm_judge")
 
 DEFAULT_PROJECTS = ["s1", "tulu", "openthoughts"]
 
+# Map project → (judge config key, prompt name).
+PROJECT_JUDGE = {
+    "s1": ("default", "judge_default"),
+    "openthoughts": ("default", "judge_default"),
+    "openthoughts_full": ("default", "judge_default"),
+    "tulu": ("tulu", "judge_tulu"),
+}
+
 
 def _classification_to_type(cls: str) -> str:
-    if cls == "CONTAMINATED":
+    """Map any of the supported classification schemes to a contamination_type."""
+    if cls in ("CONTAMINATED", "INSTANCE_CONTAMINATED", "TEMPLATE_CONTAMINATED"):
         return "c_sem"
     if cls == "RELATED":
         return "related"
@@ -77,15 +91,17 @@ def run_project(
             "contamination_type": _classification_to_type(judgment.classification),
         }
         results.append(record)
-        # Incremental save — safe to interrupt.
         with jsonlines.open(p.judge_results, mode="w") as writer:
             writer.write_all(results)
         time.sleep(rate_limit_sleep)
 
-    confirmed = sum(1 for r in results if r["classification"] == "CONTAMINATED")
+    confirmed = sum(
+        1 for r in results
+        if r["classification"] in ("CONTAMINATED", "INSTANCE_CONTAMINATED", "TEMPLATE_CONTAMINATED")
+    )
     total = sum(1 for r in results if r["classification"] != "ERROR")
     precision = confirmed / max(total, 1)
-    _log.info("  CONTAMINATED %d / %d valid  (precision %.1f%%)",
+    _log.info("  confirmed contaminated %d / %d valid  (rate %.1f%%)",
               confirmed, total, precision * 100)
     return {"contaminated": confirmed, "total_valid": total, "precision": precision}
 
@@ -97,26 +113,32 @@ def main() -> None:
     parser.add_argument("--max-candidates", type=int, default=None,
                         help="Cap candidates per project (default: judge all)")
     parser.add_argument("--sim-threshold", type=float, default=None,
-                        help="Only judge candidates with similarity >= this (e.g. 0.80 for Tulu strict)")
-    parser.add_argument("--strict", action="store_true",
-                        help="Use the step-for-step prompt (judge_strict.txt)")
+                        help="Only judge candidates with similarity >= this")
+    parser.add_argument("--judge", default=None,
+                        help="Override the judge config key (default: per-project mapping)")
+    parser.add_argument("--prompt", default=None,
+                        help="Override the prompt name (default: per-project mapping)")
     args = parser.parse_args()
 
     configure_logging()
     app_config = load_config(args.config)
     seed_everything(app_config.seed)
 
-    prompt = "judge_strict" if args.strict else "judge_default"
-    judge = Judge(app_config.judge, prompt_name=prompt)
-
     for project in args.projects:
-        _log.info("=== %s (prompt=%s) ===", project, prompt)
+        default_judge_key, default_prompt = PROJECT_JUDGE.get(
+            project, ("default", "judge_default")
+        )
+        judge_key = args.judge or default_judge_key
+        prompt = args.prompt or default_prompt
+        judge_cfg = app_config.judges[judge_key]
+        _log.info("=== %s  judge=%s  provider=%s  model=%s  prompt=%s ===",
+                  project, judge_key, judge_cfg.provider, judge_cfg.model, prompt)
+        judge = Judge(judge_cfg, prompt_name=prompt)
         run_project(
-            project,
-            judge,
+            project, judge,
             max_candidates=args.max_candidates,
             sim_threshold=args.sim_threshold,
-            rate_limit_sleep=app_config.judge.rate_limit_sleep,
+            rate_limit_sleep=judge_cfg.rate_limit_sleep,
         )
 
 

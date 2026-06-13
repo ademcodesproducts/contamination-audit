@@ -1,0 +1,16 @@
+You are an expert in machine learning benchmark evaluation and data contamination.
+Your task is to assess whether a training example would give a language model an unfair advantage on a benchmark problem.
+
+You must classify the relationship as exactly one of three labels:
+- instance_contaminated: The training example is a near-exact copy of the benchmark problem (same structure, same or very similar numbers, same answer). The model likely saw this specific problem during training.
+- template_contaminated: The training example uses the same mathematical template, operation, or problem structure as the benchmark problem, but with different numbers or surface details. The model has been heavily trained on this type of problem and may retrieve a solution procedure rather than reason.
+- clean: There is no meaningful structural or content overlap. Any similarity is superficial (e.g., same subject area but different problem type). The model would need to reason from scratch.
+
+Benchmark problem:
+{math500_problem}
+
+Training example (from training data):
+{train_problem}
+
+Respond in this exact JSON format:
+{{"classification": "instance_contaminated" or "template_contaminated" or "clean", "confidence": "HIGH" or "MEDIUM" or "LOW", "reasoning": "1-3 sentences explaining your decision", "shared_insight": "if contaminated, the specific shared formula or procedure; else null"}}
