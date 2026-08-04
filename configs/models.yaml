@@ -22,7 +22,7 @@ answer_judges:
     model: gpt-4o-mini
   anthropic:
     provider: anthropic
-    model: claude-haiku-4-5-20251001
+    model: claude-haiku-4-5-20251001 # switch to stronger model?
   vertex:
     provider: vertex
     model: gemini-2.5-flash
