@@ -1,0 +1,39 @@
+This literature review changes the calculus significantly — it surfaces the two most-cited open problems in the field, and neither is well-addressed by the "black-box CoT classifier" scope I proposed last time. Let me rescope around them directly.
+
+The two facts that should drive the pivot
+Membership-style detection is fundamentally fragile. Black-box MIA sits at AUC≈0.5 (coin flip) in rigorous comparisons. Grey-box (logit-based) methods look better but are contested. And critically — detection can be actively evaded: paraphrase-laundered contamination (rephrase the benchmark item, train on that) beats n-gram decontamination completely, to the point where a fine-tuned 13B Llama matched GPT-4 on rephrased-trained benchmarks while staying invisible to string-matching filters. There's a paper literally titled "Evading Data Contamination Detection for Language Models is (too) Easy."
+Real-world decontamination pipelines are still primitive. Apertus, OLMo 3, Meditron — all still lean on n-gram/token-overlap matching with light semantic bolt-ons. The field knows this is inadequate (see #1) but hasn't shipped anything better into practice.
+
+Put those together and you get the actual frontier gap: every existing detection method is asking "was this string (or a near-paraphrase of it) present in training?" — a membership question that's provably evadable by laundering the surface form. Your DiD/behavioral framework asks a fundamentally different question: "does the model's behavior on this item show the causal fingerprint of shortcut reliance?" That's a capability question, not a membership question — and a contaminator can't launder away the capability boost without also eliminating the reason they contaminated in the first place. That asymmetry is your paper.
+
+Rescoped project
+
+Working title: Behavioral Detection Resists Evasion: A Controlled Causal Study of Contamination Laundering
+
+Core claim to establish: Membership-based contamination detectors (n-gram, embedding similarity, Min-K%, LLM-judge) degrade toward chance as contamination is increasingly paraphrase-laundered — but causal behavioral detection (your DiD/perturbation-brittleness framework) continues to detect the capability inflation, because it measures the downstream effect rather than the upstream string match.
+
+This is a controlled injection study, not an observational audit — which is the single biggest upgrade over your current paper. Right now your DiD is underpowered and observational (you don't actually know ground-truth contamination status with certainty, just pipeline-inferred labels). A controlled study where you inject the contamination gives you ground truth, eliminates the "treatment assignment noise" limitation you already flagged, and lets you sweep laundering strength as an independent variable.
+
+Experimental design
+Curate a clean, verified-uncontaminated problem set (math, possibly + code as a stretch) — held out, checked against known corpora.
+Inject contamination at graded laundering strengths into SFT training data for open base models (7-8B, matches your existing infra):
+Verbatim (positive control — everything should detect this)
+Light paraphrase (surface rewording, same structure)
+Heavy semantic paraphrase (full rewrite, same underlying problem)
+Numeric-perturbation-laundered (change surface numbers, same solution schema — directly tests whether your own perturbation-based detector "sees through" the exact laundering technique it's designed to be robust to)
+LoRA fine-tune across these conditions (you've done this exact workflow at Bitmovin) — this is the "expensive but gold standard" causal design ConTAM flagged as rare in the field; you can afford it at small scale where big labs can't at pretraining scale.
+Apply the full standard detector suite post-hoc: n-gram overlap, embedding similarity, Min-K%, LLM-as-judge — measure detection AUC as a function of laundering strength. This replicates the known evasion result under controlled conditions (novel: nobody has cleanly shown the AUC-vs-laundering-strength curve under controlled injection before, only observationally or anecdotally).
+Apply your DiD/CoT-brittleness framework to the same models — test whether the causal behavioral signal survives laundering where membership detection collapses.
+Stretch goal: repeat a subset under GRPO/RL post-training instead of SFT, directly engaging Kocyigit & Yildirim's finding that SFT and GRPO contaminate differently — this is what would push the paper from "solid ICLR" to "field-defining," but I'd scope it as a stretch, not core, given one semester.
+Why this is stronger than my previous scope
+It directly rebuts/extends a specific, well-known paper ("Evading Detection... is Too Easy") rather than positioning against a vague field gap — reviewers can locate exactly what you're arguing against.
+It's a controlled causal experiment, which is rarer and more valued than another observational audit — you're generating ground-truth data, not just measuring against imperfect pipeline labels.
+It produces a clean, single quantitative headline result: an "evasion gap" curve — detection AUC (membership methods) vs. laundering strength, overlaid against your causal detection AUC staying flat. That's a one-figure paper hook, which reviewers respond to.
+It naturally produces a reusable artifact — the laundering-injection pipeline plus labeled model checkpoints — which is exactly what a Datasets & Benchmarks track fallback wants if the main-track bar isn't cleared.
+Feasibility for 2-3 people / one semester
+Weeks 1-3: Build the laundering pipeline (GPT-4o-based rephrasing at controlled strengths) + curate/verify clean problem pool.
+Weeks 3-6: LoRA SFT fine-tuning across laundering conditions × 1-2 base models.
+Weeks 6-9: Run full standard-detector suite (n-gram/embedding/Min-K%/judge) post-hoc; produce the evasion-degradation curve.
+Weeks 8-11: Run your DiD + CoT-fingerprint framework on the same models; this is where the "does behavioral detection survive laundering" result lands.
+Weeks 11-13: Ablations, and — if time allows — the GRPO stretch experiment on a reduced condition set.
+Weeks 13-15: Write-up, toolkit release, submission polish.
