@@ -11,6 +11,7 @@ claims to apply. The release dataset should not contain such items.
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -74,7 +75,30 @@ def token_coverage(test_tokens: list[int], shared: set[tuple[int, ...]], n: int)
     return len(covered) / len(test_tokens)
 
 
+class _WordTokenizer:
+    """Word-level tokenizer.
+
+    Published decontamination specs describe n-grams without naming a tokenizer.
+    Word-level matching is the common reading; model-token matching is the other.
+    The two disagree, which is why `tokenizer` is a swept parameter here.
+    """
+
+    _SPLIT = re.compile(r"[^a-z0-9]+")
+
+    def __init__(self, normalize: bool) -> None:
+        self.normalize = normalize
+
+    def encode(self, text: str, add_special_tokens: bool = False) -> list[str]:
+        if self.normalize:
+            return [t for t in self._SPLIT.split(text.lower()) if t]
+        return text.split()
+
+
 def _load_tokenizer(name: str):
+    if name == "word":
+        return _WordTokenizer(normalize=True)
+    if name == "word-raw":
+        return _WordTokenizer(normalize=False)
     from transformers import AutoTokenizer  # local import — heavy
     return AutoTokenizer.from_pretrained(name)
 
