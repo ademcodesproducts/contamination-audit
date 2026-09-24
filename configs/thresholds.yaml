@@ -4,20 +4,28 @@
 
 seed: 42
 
+# `tokenizer` is unspecified in all three projects' published decontamination
+# descriptions. `word` (lowercased, split on non-alphanumeric) is the literal
+# reading of an unqualified "n-gram overlap" claim and is the primary setting.
+# Sweep axis: word | word-raw | Qwen/Qwen2-7B-Instruct | Qwen/Qwen2.5-7B-Instruct
 ngram:
   s1:
     n: 8
     threshold_mode: any
+    tokenizer: word
   tulu:
     n: 8
     threshold_mode: percent
     coverage: 0.5
+    tokenizer: word
   openthoughts:
     n: 13
     threshold_mode: any
+    tokenizer: word
   openthoughts_full:
     n: 13
     threshold_mode: any
+    tokenizer: word
 
 # Stage 2 retrieval method per project. Paper §5.1:
 #   "TF-IDF cosine similarity (Tülu 3) or dense sentence embeddings

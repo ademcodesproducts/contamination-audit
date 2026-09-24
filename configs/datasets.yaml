@@ -17,11 +17,18 @@ s1:
   local: data/raw/s1k.jsonl
 
 tulu:
-  # Use the small numinamath subset by default; fall back to the full mixture
-  # and filter to math sources (gsm8k, numina, metamath, etc.).
+  # The shipped data/raw/tulu_math.jsonl (334,251 rows) is the FULL Tulu 3 SFT
+  # mixture filtered to math sources by TULU_MATH_KEYWORDS in
+  # scripts/00_load_datasets.py:32 -- five sources, of which
+  # numinamath_tir_math_decontaminated is only 64,312 rows. The mixture must
+  # therefore come first: listing numinamath first silently substitutes a
+  # 5x smaller, differently-decontaminated corpus.
+  # NOTE: TULU_MATH_KEYWORDS is itself an unspecified parameter. Restricting it
+  # to {numina, interm_algebra} yields 84,312 rows -- the figure the old paper
+  # draft reported. Which sources count as "math" is a free choice.
   hf_ids:
-    - ai2-adapt-dev/numinamath_tir_math_decontaminated
     - allenai/tulu-3-sft-mixture
+    - ai2-adapt-dev/numinamath_tir_math_decontaminated
   split: train
   local: data/raw/tulu_math.jsonl
 

@@ -1,8 +1,22 @@
 # Contamination Audit
 
-Code for **"Are Reasoning Model Benchmark Gains Real? Measuring the Inflationary Effect of Decontamination Failures"** (Demarteau, Jain, Ngetich · ANLP Sp26 / ICLR 2026 submission).
+Detection and audit tooling for benchmark contamination in open post-training
+corpora (s1K, the Tülu 3 SFT mixture, OpenThoughts-114K) against MATH-500.
 
-> Open reasoning model post-training has produced striking gains on established mathematical benchmarks, yet the validity of these gains depends critically on the integrity of decontamination pipelines that are meant to prevent training-test overlap. We conduct a systematic audit of three prominent open post-training projects — s1, Tülu 3, and OpenThoughts — each of which claimed decontamination against MATH-500 before release. Using a multi-stage detection pipeline combining n-gram replication, dense semantic embeddings, and LLM-as-judge verification, we identify benchmark items that survived each project's decontamination despite meaningful overlap with training data. We then conduct behavioral analyses via perturbation testing and chain-of-thought structural comparison, finding that contamination manifests as solution-schema brittleness rather than verbatim recitation: contaminated problems produce a 37.5% answer-abandonment rate under numerical perturbation versus 20.8% for clean problems, alongside measurably fewer self-corrections and higher math token density in reasoning traces.
+**Current direction.** The project is being rewritten around a different claim: that
+published decontamination descriptions underdetermine their own implementations, so a
+third party cannot verify them. Varying only parameters no specification states — above
+all the tokenizer — changes the count of flagged MATH-500 items by up to 11.6x, and the
+flagged *sets* overlap at Jaccard 0.08-0.22. See `docs/` and the findings log.
+
+**On the prior submission.** An earlier draft (Demarteau, Jain, Ngetich · ANLP Sp26) is
+preserved as a PDF below. Several of its claims did not survive re-analysis and must not
+be reused: the reported `judge_precision` figures are the LLM judge's yes-rate, not
+precision measured against human labels; the Cohen's kappa of 0.83 is not computed
+anywhere in this repository; the clean/contaminated splits are not matched by
+subject and level as stated; and the behavioural results rest on a run whose clean-split
+accuracy is 0.00-0.10, which indicates a broken answer-extraction harness rather than a
+null effect. Treat the PDF as a record of what was submitted, not as current findings.
 
 The full PDF is at [`paper/Final_submission_ANLP_Sp26.pdf`](paper/Final_submission_ANLP_Sp26.pdf).
 

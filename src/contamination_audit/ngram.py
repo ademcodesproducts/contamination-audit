@@ -85,20 +85,26 @@ class _WordTokenizer:
 
     _SPLIT = re.compile(r"[^a-z0-9]+")
 
-    def __init__(self, normalize: bool) -> None:
-        self.normalize = normalize
+    def __init__(self, mode: str) -> None:
+        self.mode = mode
 
     def encode(self, text: str, add_special_tokens: bool = False) -> list[str]:
-        if self.normalize:
+        if self.mode == "alnum":
             return [t for t in self._SPLIT.split(text.lower()) if t]
+        if self.mode == "s1":
+            # simplescaling/s1 data/decontaminate_util.py: normalize_string then
+            # word_ngrams -- lowercase and collapse whitespace, no punctuation stripping.
+            return " ".join(text.lower().strip().split()).split()
         return text.split()
 
 
 def _load_tokenizer(name: str):
     if name == "word":
-        return _WordTokenizer(normalize=True)
+        return _WordTokenizer("alnum")
     if name == "word-raw":
-        return _WordTokenizer(normalize=False)
+        return _WordTokenizer("raw")
+    if name == "word-s1":
+        return _WordTokenizer("s1")
     from transformers import AutoTokenizer  # local import — heavy
     return AutoTokenizer.from_pretrained(name)
 
