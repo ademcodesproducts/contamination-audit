@@ -66,3 +66,4 @@ REFACTOR_NOTES.md
 # is tracked.
 results/paper/decon_run/
 data/raw/*.bak
+data/raw/*.bak
