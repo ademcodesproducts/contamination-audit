@@ -3,6 +3,11 @@
 Detection and audit tooling for benchmark contamination in open post-training
 corpora (s1K, the Tülu 3 SFT mixture, OpenThoughts-114K) against MATH-500.
 
+**Artifact.** See [`ARTIFACT.md`](ARTIFACT.md) for how to reproduce the paper
+(`make paper`). The filter reimplementations are in
+`src/contamination_audit/filters.py`; the temporal control benchmark sets are
+`data/raw/bench_{measure,control}.jsonl`.
+
 **Current direction.** The project is being rewritten around a different claim: that
 published decontamination descriptions underdetermine their own implementations, so a
 third party cannot verify them. Varying only parameters no specification states — above

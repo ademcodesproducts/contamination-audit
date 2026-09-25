@@ -1,0 +1,82 @@
+{
+ "distinct_ngrams": 73,
+ "false_positives": 36,
+ "n_control": 280,
+ "top": [
+  {
+   "ngram": "find the sum of all possible values of",
+   "docs": 166,
+   "items": 1
+  },
+  {
+   "ngram": "let $a$ and $b$ be positive integers such",
+   "docs": 67,
+   "items": 1
+  },
+  {
+   "ngram": "$a$ and $b$ be positive integers such that",
+   "docs": 67,
+   "items": 1
+  },
+  {
+   "ngram": "is not divisible by the square of any",
+   "docs": 67,
+   "items": 1
+  },
+  {
+   "ngram": "not divisible by the square of any prime.",
+   "docs": 42,
+   "items": 1
+  },
+  {
+   "ngram": "and the sum of the squares of the",
+   "docs": 39,
+   "items": 1
+  },
+  {
+   "ngram": "divisible by the square of any prime. find",
+   "docs": 19,
+   "items": 1
+  },
+  {
+   "ngram": "find the remainder when $n$ is divided by",
+   "docs": 14,
+   "items": 1
+  },
+  {
+   "ngram": "the number of positive integers $n$ less than",
+   "docs": 10,
+   "items": 1
+  },
+  {
+   "ngram": "\\( x \\) and \\( y \\) are",
+   "docs": 9,
+   "items": 1
+  },
+  {
+   "ngram": "where $m$ and $n$ are relatively prime positive",
+   "docs": 8,
+   "items": 6
+  },
+  {
+   "ngram": "find the number of positive integers $n$ less",
+   "docs": 6,
+   "items": 1
+  },
+  {
+   "ngram": "+ b$, where $a$ and $b$ are real",
+   "docs": 6,
+   "items": 1
+  },
+  {
+   "ngram": "$m$ and $n$ are relatively prime positive integers.",
+   "docs": 5,
+   "items": 6
+  },
+  {
+   "ngram": "and $n$ are relatively prime positive integers. find",
+   "docs": 5,
+   "items": 6
+  }
+ ]
+}

@@ -1,0 +1,13 @@
+{
+ "corpus_rows": 100000,
+ "n_measure": 502,
+ "n_control": 280,
+ "measure": 0,
+ "control": 0,
+ "threshold_sweep": {
+  "0.8": 0,
+  "0.6": 0,
+  "0.4": 1,
+  "0.2": 646
+ }
+}

@@ -1,0 +1,54 @@
+{
+ "flagged": 138,
+ "slices": [
+  {
+   "source": "Dolci Think OpenThoughts3 Math",
+   "corpus_share": 34.835,
+   "docs": 337,
+   "items": 70,
+   "enrichment": 1.4561400224245564
+  },
+  {
+   "source": "Dolci Think Python Algorithms",
+   "corpus_share": 21.09,
+   "docs": 278,
+   "items": 3,
+   "enrichment": 0.1030779062815676
+  },
+  {
+   "source": "Nemotron Code",
+   "corpus_share": 5.232,
+   "docs": 211,
+   "items": 26,
+   "enrichment": 3.6010282320613394
+  },
+  {
+   "source": "SYNTHETIC-2-SFT-Verified",
+   "corpus_share": 4.914000000000001,
+   "docs": 109,
+   "items": 72,
+   "enrichment": 10.617401921749748
+  },
+  {
+   "source": "Dolci Think Precise IF",
+   "corpus_share": 6.178,
+   "docs": 24,
+   "items": 10,
+   "enrichment": 1.172932471931726
+  },
+  {
+   "source": "Dolci Think OpenThoughts3 Code",
+   "corpus_share": 4.034,
+   "docs": 4,
+   "items": 4,
+   "enrichment": 0.7185301746746855
+  },
+  {
+   "source": "Aya",
+   "corpus_share": 4.513,
+   "docs": 1,
+   "items": 2,
+   "enrichment": 0.3211334727052605
+  }
+ ]
+}

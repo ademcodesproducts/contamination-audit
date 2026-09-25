@@ -1,0 +1,32 @@
+{
+ "corpus": "tulu_math",
+ "docs": 100000,
+ "n_measure": 60,
+ "n_control": 722,
+ "filters": {
+  "s1-8gram-word": {
+   "detect": 3.3333333333333335,
+   "fp": 6.232686980609419,
+   "n_detect": 2,
+   "n_fp": 45
+  },
+  "ot3-13gram-qwen": {
+   "detect": 1.6666666666666667,
+   "fp": 6.925207756232687,
+   "n_detect": 1,
+   "n_fp": 50
+  },
+  "ot114k-fuzz95": {
+   "detect": 0.0,
+   "fp": 0.0,
+   "n_detect": 0,
+   "n_fp": 0
+  },
+  "tulu3-8gram-50pct": {
+   "detect": 0.0,
+   "fp": 0.0,
+   "n_detect": 0,
+   "n_fp": 0
+  }
+ }
+}
