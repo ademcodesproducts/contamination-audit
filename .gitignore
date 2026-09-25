@@ -65,3 +65,4 @@ REFACTOR_NOTES.md
 # scripts/21_run_decon.py). The summary it produces, results/paper/decon.json,
 # is tracked.
 results/paper/decon_run/
+data/raw/*.bak
