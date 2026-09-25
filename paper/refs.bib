@@ -1,0 +1,202 @@
+% Bibliography for the decontamination-filter comparison paper.
+%
+% Every entry below was checked against its arXiv abstract page or extracted
+% directly from the PDF. Two were wrong on first drafting and are corrected here:
+% the MathArena title and author list, and OlymMATH's author list.
+
+% ---------------------------------------------------------------- the artifacts studied
+
+@misc{olmo3,
+  title        = {Olmo 3},
+  author       = {{Team Olmo}},
+  year         = {2025},
+  eprint       = {2512.13961},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.CL},
+  note         = {v1 December 2025; v2 April 2026}
+}
+
+@misc{s1,
+  title        = {s1: Simple Test-Time Scaling},
+  author       = {Muennighoff, Niklas and Yang, Zitong and Shi, Weijia and Li,
+                  Xiang Lisa and Fei-Fei, Li and Hajishirzi, Hannaneh and
+                  Zettlemoyer, Luke and Liang, Percy and Cand{\`e}s, Emmanuel
+                  and Hashimoto, Tatsunori},
+  year         = {2025},
+  eprint       = {2501.19393},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.CL}
+}
+
+@misc{tulu3,
+  title        = {T{\"u}lu 3: Pushing Frontiers in Open Language Model Post-Training},
+  author       = {Lambert, Nathan and Morrison, Jacob and Pyatkin, Valentina and
+                  Huang, Shengyi and Ivison, Hamish and Brahman, Faeze and
+                  Miranda, Lester James V. and others},
+  year         = {2024},
+  eprint       = {2411.15124},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.CL}
+}
+
+@misc{openthoughts,
+  title        = {OpenThoughts: Data Recipes for Reasoning Models},
+  author       = {Guha, Etash and Marten, Ryan and Keh, Sedrick and others},
+  year         = {2025},
+  eprint       = {2506.04178},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.LG}
+}
+
+% ---------------------------------------------------------------- benchmarks
+
+@misc{olymmath,
+  title        = {Challenging the Boundaries of Reasoning: An Olympiad-Level
+                  Math Benchmark for Large Language Models},
+  author       = {Sun, Haoxiang and Min, Yingqian and Chen, Zhipeng and
+                  Zhao, Wayne Xin and Wen, Ji-Rong},
+  year         = {2025},
+  eprint       = {2503.21380},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.CL},
+  note         = {Accepted to ACL 2026 Main}
+}
+
+@misc{matharena,
+  title        = {Beyond Benchmarks: {MathArena} as an Evaluation Platform for
+                  Mathematics with {LLM}s},
+  author       = {Dekoninck, Jasper and Jovanovi{'c}, Nikola and Gehrunger, Tim
+                  and R{\"o}gnvaldsson, K{'a}ri and Petrov, Ivo and Sun, Chenhao
+                  and Vechev, Martin},
+  year         = {2026},
+  eprint       = {2605.00674},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.CL}
+}
+
+% ---------------------------------------------------------------- audit reliability
+
+@misc{auditingtheaudit,
+  title        = {Auditing the Audit: Five Failure Modes in Benchmark-Validity Audits},
+  author       = {Li, Yanhang and Fan, Zhichao and Zhuang, Zexin},
+  year         = {2026},
+  eprint       = {2607.02586},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.LG}
+}
+
+@misc{reliabilitygap,
+  title        = {The Reliability Gap in Benchmark Auditing: Distribution Shift
+                  and Scale as Failure Modes of Contamination Detection},
+  author       = {Zarzecki, Wojciech and Dubi{\'n}ski, Jan and Cygert, Sebastian},
+  year         = {2026},
+  eprint       = {2606.03305},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.AI}
+}
+
+@misc{detectable,
+  title        = {When Is Benchmark Contamination Detectable? Information Limits
+                  and Power-Calibrated Audits},
+  author       = {Shihab, Ibne Farabi and Akter, Sanjeda and Sharma, Anuj},
+  year         = {2026},
+  eprint       = {2608.07914},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.AI}
+}
+
+% ---------------------------------------------------------------- contamination detection
+
+@inproceedings{gemreview,
+  title     = {Are {LLM} Benchmarks Already Contaminated? A Systematic Review of
+               Contamination Detection Methods},
+  author    = {Nourbakhsh, Erfan and Sirjani, Mohammad Sadegh and Mousavi, Amir
+               and Nguyen, Khoa and Quarles, John and Xie, Mimi and Slavin, Rocky},
+  booktitle = {Proceedings of the Workshop on Generation, Evaluation and Metrics (GEM)},
+  year      = {2026}
+}
+
+@inproceedings{controllable,
+  title     = {Controllable Contamination Detection for Reliable {LLM} Evaluation
+               with Statistical Guarantees},
+  author    = {Zhang, Zheng and Liu, Qi and Liang, Siyuan and Li, Ning and Hu, Zirui
+               and Gao, Weibo and Li, Rui and Huang, Zhenya and Rutkowski, Leszek},
+  booktitle = {Proceedings of the 64th Annual Meeting of the Association for
+               Computational Linguistics (ACL)},
+  year      = {2026}
+}
+
+@inproceedings{fragility,
+  title     = {On the Fragility of Benchmark Contamination Detection in Reasoning Models},
+  author    = {Wang, Han and Li, Haoyu and Ko, Brian and Zhang, Huan},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2026},
+  note      = {arXiv:2510.02386}
+}
+
+@inproceedings{preferenceleakage,
+  title     = {Preference Leakage: A Contamination Problem in {LLM}-as-a-Judge},
+  author    = {Li, Dawei and Sun, Renliang and Huang, Yue and Zhong, Ming and
+               Jiang, Bohan and Han, Jiawei and Zhang, Xiangliang and Wang, Wei},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2026},
+  note      = {arXiv:2502.01534}
+}
+
+@misc{judgerobustness,
+  title        = {{LLM}s Cannot Reliably Judge (Yet?): A Comprehensive Assessment
+                  on the Robustness of {LLM}-as-a-Judge},
+  author       = {Li, Songze and Xu, Chuokun and Wang, Jiaying and Gong, Xueluan
+                  and Chen, Chen and Zhang, Jirui and Wang, Jun and Lam, Kwok-Yan
+                  and Ji, Shouling},
+  year         = {2025},
+  eprint       = {2506.09443},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.CL}
+}
+
+@misc{deepseekreplication,
+  title        = {100 Days After {DeepSeek-R1}: A Survey on Replication Studies
+                  and More Directions for Reasoning Language Models},
+  author       = {Zhang, Chong and Deng, Yue and Lin, Xiang and Wang, Bin and
+                  Ng, Dianwen and Ye, Hai and Li, Xingxuan and Xiao, Yao and
+                  Mo, Zhanfeng and Zhang, Qi and Bing, Lidong},
+  year         = {2025},
+  eprint       = {2505.00551},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.CL}
+}
+
+% ---------------------------------------------------------------- classic contamination work
+
+@misc{sainz2023,
+  title        = {{NLP} Evaluation in Trouble: On the Need to Measure {LLM} Data
+                  Contamination for each Benchmark},
+  author       = {Sainz, Oscar and Campos, Jon Ander and Garc{'i}a-Ferrero, Iker
+                  and Etxaniz, Julen and de Lacalle, Oier Lopez and Agirre, Eneko},
+  year         = {2023},
+  eprint       = {2310.18018},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.CL},
+  note         = {Findings of EMNLP}
+}
+
+@inproceedings{oren2024,
+  title     = {Proving Test Set Contamination in Black Box Language Models},
+  author    = {Oren, Yonatan and Meister, Nicole and Chatterji, Niladri and
+               Ladhak, Faisal and Hashimoto, Tatsunori B.},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2024},
+  note      = {arXiv:2310.17623}
+}
+
+@misc{yang2023rephrase,
+  title     = {Rethinking Benchmark and Contamination for Language Models with
+               Rephrased Samples},
+  author    = {Yang, Shuo and Chiang, Wei-Lin and Zheng, Lianmin and Gonzalez,
+               Joseph E. and Stoica, Ion},
+  year      = {2023},
+  eprint    = {2311.04850},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CL}
+}
