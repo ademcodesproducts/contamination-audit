@@ -9,12 +9,12 @@
    "items": 1
   },
   {
-   "ngram": "let $a$ and $b$ be positive integers such",
+   "ngram": "$a$ and $b$ be positive integers such that",
    "docs": 67,
    "items": 1
   },
   {
-   "ngram": "$a$ and $b$ be positive integers such that",
+   "ngram": "let $a$ and $b$ be positive integers such",
    "docs": 67,
    "items": 1
   },

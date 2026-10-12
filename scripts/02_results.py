@@ -2,9 +2,10 @@
 
 Each stage writes one JSON file under results/paper/ and prints its figures the
 way the paper states them, so the two can be diffed. Stages are independent and
-share no state; --stage runs one, no argument runs all eleven in this order:
+share no state; --stage runs one, no argument runs all twelve in this order:
 
   main         Table 2, flag counts per filter on both benchmark groups
+  strata       the control set's two genres, scored separately
   consensus    Sec. 6, filter agreement and bootstrap intervals
   scaling      Fig. 1, error fraction against corpus size      (slowest, ~25 min)
   tuning       Fig. 2, the n-gram and threshold sweeps
@@ -90,6 +91,10 @@ def corpus(n: int) -> list[str]:
             if i >= n:
                 break
             questions.append(json.loads(line)["problem"])
+    # A short file would otherwise be reported under the size that was asked
+    # for, labelling a 100k run as 390k.
+    if len(questions) != n:
+        raise SystemExit(f"{CORPUS} holds {len(questions)} questions, needed {n}")
     return questions
 
 
@@ -114,6 +119,16 @@ def benchmark_texts() -> tuple[list[str], list[str]]:
 def filters():
     """The four faithful filters, in the order the paper's tables use."""
     return [(f.name, f.provenance, f.run) for f in registry()]
+
+
+def load_decon():
+    """What scripts/03_run_decon.py recorded, or None if it was never run.
+
+    decon is a Rust binary and is not part of the filter registry, so its counts
+    come from that script's output rather than from a run here.
+    """
+    path = OUT / "decon.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
 
 def save(name: str, obj) -> None:
@@ -180,11 +195,18 @@ def stage_main():
             f"{len(flagged_control):5d} ({100 * len(flagged_control) / n_control:5.1f}%)"
         )
 
-    # decon is the fifth row of Table 2 but is a Rust binary; scripts/03_run_decon.py
-    # produces it. Both its counts are zero, which is the row's whole point.
-    print(
-        f"{'decon (see 03_run_decon)':24s} {'code':6s} {0:5d} (  0.0%) {0:5d} (  0.0%)"
-    )
+    # decon is the fifth row of Table 2, but it is a Rust binary rather than a
+    # filter in this registry, so scripts/03_run_decon.py runs it separately.
+    # Read what that run actually reported; do not assume it found nothing.
+    decon = load_decon()
+    if decon is None:
+        print(f"{'decon':24s} {'code':6s} {'NOT RUN -- see 03_run_decon.py':>31s}")
+    else:
+        print(
+            f"{'decon (see 03_run_decon)':24s} {'code':6s} "
+            f"{decon['measure']:5d} ({100 * decon['measure'] / n_measure:5.1f}%) "
+            f"{decon['control']:5d} ({100 * decon['control'] / n_control:5.1f}%)"
+        )
 
     save(
         "main",
@@ -202,11 +224,27 @@ def stage_consensus():
     main_results = json.loads((OUT / "main.json").read_text(encoding="utf-8"))
     n_measure, n_control = main_results["n_measure"], main_results["n_control"]
 
-    # decon flags nothing, but it is one of the filters under comparison, so it
-    # belongs in the denominator of "how many filters agree".
     flagged_by = {
         name: set(r["measure"]) for name, r in main_results["filters"].items()
     }
+
+    # decon is one of the five filters compared, so it belongs in the denominator
+    # of "how many filters agree". scripts/03_run_decon.py records only counts,
+    # not which items it hit, so an empty set is right precisely when that count
+    # is zero. If it ever hits something, the agreement numbers below cannot be
+    # computed without the indices -- stop rather than silently understate them.
+    decon = load_decon()
+    if decon is None:
+        raise SystemExit(
+            "consensus needs decon's result for the agreement denominator; "
+            "run: python scripts/03_run_decon.py --decon-bin ..."
+        )
+    if decon["measure"]:
+        raise SystemExit(
+            f"decon flagged {decon['measure']} measurement items, but decon.json "
+            "records counts only. Extend scripts/03_run_decon.py to save the "
+            "flagged indices before computing agreement."
+        )
     flagged_by["decon"] = set()
     n_filters = len(flagged_by)
 
@@ -816,8 +854,53 @@ def stage_phrases():
 # ----------------------------------------------------------- entry point
 
 # Ordered as the paper presents them; `--stage` runs one, no argument runs all.
+def stage_strata():
+    """The control set's two genres, scored separately.
+
+    The measurement set is almost entirely competition problems, but only 69 of
+    the 280 controls are. Pooling the two genres into one false-positive rate
+    averages populations the filters treat very differently, and the weighting
+    is an accident of which MathArena sets exist for 2026.
+    """
+    COMPETITION = {"aime_2026", "hmmt_feb_2026", "usamo_2026"}
+
+    _, control = benchmarks()
+    main = json.loads((OUT / "main.json").read_text(encoding="utf-8"))
+
+    genre = [
+        "competition" if r.get("benchmark") in COMPETITION else "research"
+        for r in control
+    ]
+    sizes = collections.Counter(genre)
+
+    rows = {}
+    print(f"\nControl set by genre (competition={sizes['competition']}, "
+          f"research={sizes['research']})")
+    print(f"{'filter':26s} {'competition':>18s} {'research':>18s}")
+    for name, flagged in main["filters"].items():
+        counts = collections.Counter(genre[i] for i in flagged["control"])
+        rows[name] = {
+            stratum: {
+                "n": sizes[stratum],
+                "flagged": counts[stratum],
+                "pct": 100 * counts[stratum] / sizes[stratum] if sizes[stratum] else 0.0,
+            }
+            for stratum in ("competition", "research")
+        }
+        comp, res = rows[name]["competition"], rows[name]["research"]
+        print(
+            f"{name:26s} {comp['flagged']:5d} ({comp['pct']:5.1f}%) "
+            f"  {res['flagged']:5d} ({res['pct']:5.1f}%)"
+        )
+
+    out = {"sizes": dict(sizes), "filters": rows}
+    (OUT / "strata.json").write_text(json.dumps(out, indent=1), encoding="utf-8")
+    _log.info("wrote %s", OUT / "strata.json")
+
+
 STAGES = {
     "main": stage_main,
+    "strata": stage_strata,
     "consensus": stage_consensus,
     "scaling": stage_scaling,
     "tuning": stage_tuning,
@@ -836,7 +919,7 @@ def main():
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument(
-        "--stage", choices=list(STAGES), help="run a single stage instead of all eleven"
+        "--stage", choices=list(STAGES), help="run a single stage instead of all twelve"
     )
     args = parser.parse_args()
     configure_logging()

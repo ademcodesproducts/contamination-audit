@@ -6,6 +6,7 @@ is that each filter does what its source project's code does, not that it
 detects contamination well.
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -136,7 +137,62 @@ def test_registry_order_matches_the_paper_tables():
     # part of what the tables mean. Changing it reorders every table row.
     assert [f.name for f in registry()] == [
         "s1-8gram-word",
-        "ot3-13gram-qwen",
+        "ot3-13gram-qwen-or-fuzz75",
         "ot114k-fuzz95",
         "tulu3-8gram-50pct",
     ]
+
+
+def test_coverage_is_scored_per_document_not_pooled():
+    # open-instruct scores each training document separately and reads the best
+    # one (decontamination/search.py:102,133). Pooling across documents let
+    # three unrelated documents jointly "cover" an item none of them contained.
+    item = " ".join(f"w{i}" for i in range(20))
+    fragments = [
+        " ".join(f"w{i}" for i in range(0, 8)),
+        " ".join(f"w{i}" for i in range(6, 14)),
+        " ".join(f"w{i}" for i in range(12, 20)),
+    ]
+    # Together the fragments cover all 20 tokens; separately each covers 8.
+    assert flag_by_coverage(fragments, [item], 8, 0.5, tok_whitespace) == set()
+    assert flag_by_coverage([item], [item], 8, 0.5, tok_whitespace) == {0}
+
+
+def test_sampled_phrases_are_spread_through_the_item_not_alphabetised():
+    # Sorting the n-grams before sampling spaced them through an alphabetised
+    # list, so the positional spread the method depends on was never applied.
+    tokens = [f"w{i:03d}" for i in range(60)]
+    item = " ".join(tokens)
+    # A document holding only the item's opening should not satisfy a sample
+    # that is genuinely spread across the whole item.
+    opening = " ".join(tokens[:20])
+    assert flag_by_sampled_phrases([opening], [item], frac=0.5) == set()
+    assert flag_by_sampled_phrases([item], [item], frac=0.5) == {0}
+
+
+def test_sampled_phrases_are_the_positional_ones():
+    # `ngrams` returns a set, so sampling from it spaces the phrases through a
+    # hash or alphabetical ordering rather than through the problem. The tokens
+    # here descend alphabetically as they ascend positionally, so the two
+    # orderings select different windows and the distinction is visible.
+    tokens = [f"w{40 - i:03d}" for i in range(40)]
+    item = " ".join(tokens)
+
+    # With n_phrases=2 the positional sample is the first window and the
+    # middle one. A document holding exactly those two satisfies frac=1.0.
+    n_windows = len(tokens) - 8 + 1
+    positional = [tokens[0:8], tokens[n_windows // 2 : n_windows // 2 + 8]]
+    document = " ".join(" ".join(w) for w in positional)
+
+    assert flag_by_sampled_phrases(
+        [document], [item], n_phrases=2, frac=1.0
+    ) == {0}, "the two sampled phrases should be the first and middle windows"
+
+
+def test_phrase_agreement_is_counted_within_one_document():
+    # Phrases satisfied by several unrelated documents are exactly the
+    # stock-phrase match this filter exists to suppress.
+    tokens = [f"w{i:03d}" for i in range(60)]
+    item = " ".join(tokens)
+    halves = [" ".join(tokens[:30]), " ".join(tokens[30:])]
+    assert flag_by_sampled_phrases(halves, [item], frac=0.9) == set()

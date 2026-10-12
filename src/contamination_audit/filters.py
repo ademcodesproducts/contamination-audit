@@ -57,6 +57,21 @@ def _tiktoken(encoding: str) -> Callable[[str], list[int]]:
     return lambda text: enc.encode(text)
 
 
+@functools.cache
+def _spacy_tokenizer():
+    import spacy
+
+    # Only the tokenizer: open-instruct calls the loaded pipeline and reads
+    # token.text, which the tagger, parser and NER do not affect. Verified
+    # identical on 261 corpus and benchmark strings, and about 150x faster.
+    return spacy.load("en_core_web_lg").tokenizer
+
+
+def tok_spacy(text: str) -> list[str]:
+    """Tulu 3's tokenizer: allenai/open-instruct decontamination/search.py:16,87."""
+    return [token.text for token in _spacy_tokenizer()(text)]
+
+
 def tok_qwen(text: str) -> list[int]:
     """OpenThoughts3's tokenizer. Loaded on first call, not at import."""
     return _hf_tokenizer("Qwen/Qwen2-7B-Instruct")(text)
@@ -139,18 +154,27 @@ def flag_by_coverage(
             gram = tuple(tokens[position : position + n])
             lookup.setdefault(gram, set()).add((item, position))
 
-    covered: dict[int, set[int]] = {}
+    # Coverage is scored per training document, then maximised over documents:
+    # open-instruct keys its matches by doc_id and reads the best single
+    # document's score (decontamination/search.py:102,133). Pooling positions
+    # across the corpus instead lets fragments from unrelated documents clear
+    # the threshold together, flagging items no one document covers.
+    best: dict[int, int] = {}
     for text in corpus:
         if not text.strip():
             continue
+        covered: dict[int, set[int]] = {}
         for gram in ngrams(tokenize(text), n):
             for item, position in lookup.get(gram, ()):
                 covered.setdefault(item, set()).update(range(position, position + n))
+        for item, marked in covered.items():
+            if len(marked) > best.get(item, 0):
+                best[item] = len(marked)
 
     return {
         item
-        for item, marked in covered.items()
-        if bench_tokens[item] and len(marked) / len(bench_tokens[item]) > coverage
+        for item, marked in best.items()
+        if bench_tokens[item] and marked / len(bench_tokens[item]) > coverage
     }
 
 
@@ -178,7 +202,12 @@ def flag_by_sampled_phrases(
     lookup: dict[tuple, set[tuple[int, int]]] = {}
     n_sampled: list[int] = []
     for item, text in enumerate(bench):
-        grams = sorted(ngrams(tokenize(text), n))
+        # Windows in the order they occur in the item. `ngrams` returns a set,
+        # so sampling from it spaces the phrases through a hash or alphabetical
+        # ordering rather than through the problem, which is the one property
+        # this filter depends on.
+        tokens = tokenize(text)
+        grams = [tuple(tokens[p : p + n]) for p in range(len(tokens) - n + 1)]
         if not grams:
             n_sampled.append(0)
             continue
@@ -193,18 +222,26 @@ def flag_by_sampled_phrases(
         for position, gram in enumerate(picked):
             lookup.setdefault(gram, set()).add((item, position))
 
-    found: dict[int, set[int]] = {}
+    # Agreement is counted within one document, then maximised over documents.
+    # Pooling across the corpus would let unrelated documents each contribute a
+    # phrase and jointly clear `frac`, which is the single-stock-phrase match
+    # this filter exists to suppress.
+    best: dict[int, int] = {}
     for text in corpus:
         if not text.strip():
             continue
+        found: dict[int, set[int]] = {}
         for gram in ngrams(tokenize(text), n):
             for item, position in lookup.get(gram, ()):
                 found.setdefault(item, set()).add(position)
+        for item, positions in found.items():
+            if len(positions) > best.get(item, 0):
+                best[item] = len(positions)
 
     return {
         item
-        for item, positions in found.items()
-        if n_sampled[item] and len(positions) / n_sampled[item] >= frac
+        for item, hits in best.items()
+        if n_sampled[item] and hits / n_sampled[item] >= frac
     }
 
 
@@ -237,11 +274,15 @@ def registry(include_partial: bool = False) -> list[DecontaminationFilter]:
             lambda c, b: flag_by_ngram(c, b, 8, tok_s1),
         ),
         DecontaminationFilter(
-            "ot3-13gram-qwen",
+            "ot3-13gram-qwen-or-fuzz75",
             "OpenThoughts3",
             "code",
-            "any shared 13-gram over Qwen/Qwen2-7B-Instruct tokens",
-            lambda c, b: flag_by_ngram(c, b, 13, tok_qwen),
+            "any shared 13-gram over Qwen/Qwen2-7B-Instruct tokens OR "
+            "rapidfuzz fuzz.ratio >= 75. Both branches, as the paper states "
+            "(Appendix F, 'marked as contaminated by either of our methods'). "
+            "The released math config sets the fuzzy cutoff to 80, which adds "
+            "no further items on this corpus.",
+            lambda c, b: flag_by_ngram(c, b, 13, tok_qwen) | flag_by_fuzz(c, b, 75.0),
         ),
         DecontaminationFilter(
             "ot114k-fuzz95",
@@ -269,9 +310,17 @@ def registry(include_partial: bool = False) -> list[DecontaminationFilter]:
             "tulu3-8gram-50pct",
             "Tulu 3",
             "prose",
-            "8-gram, >50% benchmark-token coverage -- values from the paper only; "
-            "the released code declares no defaults for either",
-            lambda c, b: flag_by_coverage(c, b, 8, 0.5, tok_whitespace),
+            "8-gram, >50% benchmark-token coverage, scored per training document "
+            "and maximised over documents, over spaCy en_core_web_lg tokens -- "
+            "the aggregation and tokenizer open-instruct uses "
+            "(decontamination/search.py:16,87,102,133). n and the threshold come "
+            "from the paper; the released code declares no defaults for either. "
+            "One departure remains: open-instruct reaches candidate documents "
+            "through Elasticsearch, capped at --search_size (default 100) hits "
+            "per n-gram, where this scans the corpus exhaustively. Seeing every "
+            "matching document can only raise the per-item maximum, so this is "
+            "an upper bound on what the retrieval-gated original would flag.",
+            lambda c, b: flag_by_coverage(c, b, 8, 0.5, tok_spacy),
         ),
     ]
     return all_filters if include_partial else [f for f in all_filters if f.faithful]

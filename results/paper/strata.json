@@ -1,0 +1,56 @@
+{
+ "sizes": {
+  "competition": 69,
+  "research": 211
+ },
+ "filters": {
+  "s1-8gram-word": {
+   "competition": {
+    "n": 69,
+    "flagged": 28,
+    "pct": 40.57971014492754
+   },
+   "research": {
+    "n": 211,
+    "flagged": 8,
+    "pct": 3.7914691943127963
+   }
+  },
+  "ot3-13gram-qwen-or-fuzz75": {
+   "competition": {
+    "n": 69,
+    "flagged": 18,
+    "pct": 26.08695652173913
+   },
+   "research": {
+    "n": 211,
+    "flagged": 13,
+    "pct": 6.161137440758294
+   }
+  },
+  "ot114k-fuzz95": {
+   "competition": {
+    "n": 69,
+    "flagged": 0,
+    "pct": 0.0
+   },
+   "research": {
+    "n": 211,
+    "flagged": 0,
+    "pct": 0.0
+   }
+  },
+  "tulu3-8gram-50pct": {
+   "competition": {
+    "n": 69,
+    "flagged": 0,
+    "pct": 0.0
+   },
+   "research": {
+    "n": 211,
+    "flagged": 0,
+    "pct": 0.0
+   }
+  }
+ }
+}

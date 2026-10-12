@@ -32,6 +32,11 @@ _log = logging.getLogger("run_decon")
 
 THRESHOLDS = [0.8, 0.6, 0.4, 0.2]  # 0.8 is decon's own default
 
+# The corpus sizes scripts/02_results.py sweeps in its scaling stage. decon is
+# not in that registry, so the paper's claim that it stays at zero across the
+# sweep needs its own run at each size rather than an assumption.
+SCALING_SIZES = [12_500, 25_000, 50_000, 100_000, 150_000, 250_000, 390_000]
+
 
 def write_evals(rows: list[dict], group: str, out_dir: Path) -> int:
     """decon expects its own schema; doc_id and eval_instance_index must be ints."""
@@ -133,6 +138,11 @@ def main() -> None:
     )
     parser.add_argument("--corpus-rows", type=int, default=100_000)
     parser.add_argument("--work", default="results/paper/decon_run")
+    parser.add_argument(
+        "--scaling",
+        action="store_true",
+        help="also run the measurement set at each corpus size 02_results.py sweeps",
+    )
     args = parser.parse_args()
     configure_logging()
 
@@ -182,6 +192,24 @@ def main() -> None:
         sweep[t] = hits
         print(f"  threshold {t:.1f}  {hits:6d} contaminated documents")
     out["threshold_sweep"] = sweep
+
+    if args.scaling:
+        print("\ndecon across the scaling sweep (measurement set, default threshold)")
+        scaling = {}
+        for size in SCALING_SIZES:
+            n = write_training(size, work / "training_scale")
+            if n != size:
+                raise SystemExit(f"corpus holds {n} rows, needed {size}")
+            hits = run(
+                args.decon_bin,
+                work / "training_scale",
+                work / "evals_measure",
+                work / f"report_scale{size}",
+                None,
+            )
+            scaling[size] = hits
+            print(f"  {size:7d} documents  {hits:5d} contaminated documents")
+        out["scaling"] = scaling
 
     dest = Path("results/paper/decon.json")
     dest.parent.mkdir(parents=True, exist_ok=True)

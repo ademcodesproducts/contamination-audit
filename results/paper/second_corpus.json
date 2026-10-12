@@ -10,7 +10,7 @@
    "n_detect": 2,
    "n_fp": 45
   },
-  "ot3-13gram-qwen": {
+  "ot3-13gram-qwen-or-fuzz75": {
    "detect": 1.6666666666666667,
    "fp": 6.925207756232687,
    "n_detect": 1,

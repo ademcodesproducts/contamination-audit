@@ -2,9 +2,12 @@
 datasets>=2.18.0
 
 # Tokenizers the filters are defined against. OpenThoughts3 pins a HuggingFace
-# model tokenizer; decon uses cl100k, which tiktoken provides.
+# model tokenizer; decon uses cl100k, which tiktoken provides; Tulu 3 uses
+# spaCy's en_core_web_lg, which is not on PyPI and installs separately:
+#     python -m spacy download en_core_web_lg
 transformers>=4.40.0
 tiktoken>=0.6.0
+spacy>=3.7.0
 
 # OpenThoughts-114K's filter is rapidfuzz fuzz.ratio. numpy reduces the
 # score matrix rapidfuzz returns.

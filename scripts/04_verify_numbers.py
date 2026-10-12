@@ -126,7 +126,16 @@ def check_phrases(data) -> Iterator[Check]:
 
 
 def check_decon(data) -> Iterator[Check]:
-    """Sec. 7: decon's own contamination-score sweep."""
+    """Sec. 7: decon's Table 2 row, and its own contamination-score sweep.
+
+    decon is run by a separate script, so its Table 2 row is the one place a
+    stale result could reach the paper unnoticed. "0 (0.0%)" on its own matches
+    several other filters, so match the whole row rather than the counts.
+    """
+    measure = f"{data['measure']} ({pct_of(data['measure'], data['n_measure'])})"
+    control = f"{data['control']} ({pct_of(data['control'], data['n_control'])})"
+    yield "decon Table 2 row", f"decon}} & {measure} & {control}"
+
     sweep = data.get("threshold_sweep", {})
     if "0.2" in sweep:
         yield "decon at threshold 0.2", str(sweep["0.2"])
@@ -199,7 +208,9 @@ def main() -> int:
         print("\nA miss is not automatically an error: the paper may phrase a number")
         print("differently, or omit it deliberately. Each one needs a human look.")
 
-    return 1 if missing else 0
+    # An unrun stage verifies nothing, so a clean count over an empty results
+    # directory would otherwise exit 0 and read as a pass.
+    return 1 if missing or skipped else 0
 
 
 if __name__ == "__main__":
