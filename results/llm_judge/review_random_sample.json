@@ -1,0 +1,26 @@
+{
+  "seed": 42,
+  "pair_ids": [
+    "7300dc4d6cf18d4d7fe1",
+    "bc182fe1d7cdd5810848",
+    "e8010dc2f590eb24092e",
+    "5be3b03225210d969d4e",
+    "c4c1b3e3e5c5ec052eba",
+    "302a18392f5e74f3170e",
+    "be2e0d05c3c701c86f64",
+    "d78935dc5e1281315de0",
+    "8f50092563c6b1e83f5f",
+    "6c333fdd2c63f01fd73d",
+    "4206bc6d3a3c059ef378",
+    "891b93ee6e16d054c3ad",
+    "eec20913df9de0124e4e",
+    "2c92eb4b639f22a92bcc",
+    "9d51742eecd1eb18b274",
+    "3ab80d3970dd49439051",
+    "c19be0ea2065dcfdec56",
+    "7c3aebd4200b87f9437c",
+    "f7847d870e2fb0b4cbd8",
+    "0ce73132c1361dc0af34"
+  ],
+  "selection": "Uniform sample of 20 distinct candidate pairs, selected before first-pass completion for an independent consistency check."
+}

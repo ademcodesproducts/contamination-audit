@@ -163,6 +163,22 @@ pytest tests/
 
 22 tests cover the silent-failure paths most likely to break a paper number: n-gram extraction + coverage, FAISS retrieval determinism, judge JSON parsing (incl. regex fallback for malformed LaTeX-laden responses), and `\boxed{}` answer extraction + equivalence.
 
+## Saved candidate-pair judge (October 2026)
+
+The optional `scripts/06_llm_judge.py` reviews saved benchmark/training question
+pairs through the OpenAI API. The completed experiment includes 565 judgments,
+20 repeat checks, and the frozen input and output files. See
+[the judge experiment](results/llm_judge/README.md) for results, scope, and API
+instructions. Install the optional dependencies with `pip install -e '.[judge]'`.
+
+Rebuild and verify the saved experiment without API calls:
+
+```bash
+python scripts/06_prepare_judge_pairs.py --output results/judge/rebuilt_pairs.jsonl
+cmp results/judge/rebuilt_pairs.jsonl results/llm_judge/pairs.jsonl
+python scripts/06_summarize_judge.py
+```
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

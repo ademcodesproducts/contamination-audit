@@ -1,0 +1,20 @@
+{
+  "primary_calls_completed": 565,
+  "review_calls_completed": 20,
+  "python": "3.14.3",
+  "packages": {
+    "openai": "3.29.0",
+    "pydantic": "2.14.1"
+  },
+  "model": [
+    "gpt-6-astra"
+  ],
+  "reasoning_effort": "high",
+  "prompt_sha256": "afc50fc1cfdac0aa4a2424be512cc205ca1e1c9e93a52f9238ade26340545b9f",
+  "script_sha256": "213994ab974a5628bf9eff8e1d61374f81224a8329cef93ad17a8832f2633088",
+  "input_sha256": "ab42a98df23391ece014e3bdf9239b1b4c817d1530f5d1f5257b6691e51fed6c",
+  "output_sha256": "94164a743876156d77d6555301f548dc01f3da6dfa5214aa6afebb429e0d01f4",
+  "primary_parallel_batches": 8,
+  "random_review_parallel_batches": 4,
+  "source_scope": "Distinct exact-text pairs from saved top-three candidates for flagged s1 and Qwen13 items, per-document coverage >0.5, and saved fuzzy candidates scoring >=75. Retains original benchmark memberships. Not all corpus matches; no new retrieval or filter runs."
+}

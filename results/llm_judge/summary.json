@@ -1,0 +1,96 @@
+{
+  "scope": "Model judgments of 565 saved candidate pairs, with up to three saved candidates per retrieval branch. Labels are not human ground truth; questions without a confirmed saved match are not established negatives.",
+  "temporal_controls": "Control benchmark items remain negatives under the study temporal assumption. Semantic relationship labels do not change their temporal labels.",
+  "pairs": 565,
+  "labels": {
+    "unrelated": 136,
+    "related_but_distinct": 215,
+    "generic_overlap": 214
+  },
+  "needs_review": 0,
+  "quote_check_failed_or_missing": 0,
+  "groups": {
+    "measure": {
+      "pairs": 451,
+      "labels": {
+        "unrelated": 100,
+        "related_but_distinct": 187,
+        "generic_overlap": 164
+      },
+      "overlap_types": {
+        "none": 100,
+        "mathematical_setup": 143,
+        "stock_instructions": 138,
+        "other_overlap": 47,
+        "standard_definition": 23
+      },
+      "distinct_questions": 198,
+      "with_at_least_one_same_problem_pair": 0,
+      "with_at_least_one_uncertain_pair": 0
+    },
+    "control": {
+      "pairs": 114,
+      "labels": {
+        "generic_overlap": 50,
+        "related_but_distinct": 28,
+        "unrelated": 36
+      },
+      "overlap_types": {
+        "stock_instructions": 43,
+        "standard_definition": 5,
+        "mathematical_setup": 21,
+        "other_overlap": 9,
+        "none": 36
+      },
+      "distinct_questions": 51,
+      "with_at_least_one_same_problem_pair": 0,
+      "with_at_least_one_uncertain_pair": 0
+    }
+  },
+  "retrieval_branches": {
+    "coverage_per_document": {
+      "pairs": 6,
+      "labels": {
+        "related_but_distinct": 1,
+        "generic_overlap": 5
+      },
+      "scope": "Saved pairs retrieved by this branch; branches overlap. These are not benchmark-level precision estimates."
+    },
+    "ot3": {
+      "pairs": 325,
+      "labels": {
+        "unrelated": 108,
+        "generic_overlap": 89,
+        "related_but_distinct": 128
+      },
+      "scope": "Saved pairs retrieved by this branch; branches overlap. These are not benchmark-level precision estimates."
+    },
+    "ot3_fuzzy75": {
+      "pairs": 4,
+      "labels": {
+        "related_but_distinct": 3,
+        "generic_overlap": 1
+      },
+      "scope": "Saved pairs retrieved by this branch; branches overlap. These are not benchmark-level precision estimates."
+    },
+    "s1": {
+      "pairs": 315,
+      "labels": {
+        "related_but_distinct": 110,
+        "generic_overlap": 171,
+        "unrelated": 34
+      },
+      "scope": "Saved pairs retrieved by this branch; branches overlap. These are not benchmark-level precision estimates."
+    }
+  },
+  "token_usage": {
+    "input_tokens": 475181,
+    "output_tokens": 301935,
+    "total_tokens": 777116
+  },
+  "model": [
+    "gpt-6-astra"
+  ],
+  "prompt_sha256": "afc50fc1cfdac0aa4a2424be512cc205ca1e1c9e93a52f9238ade26340545b9f",
+  "input_sha256": "ab42a98df23391ece014e3bdf9239b1b4c817d1530f5d1f5257b6691e51fed6c"
+}
