@@ -35,8 +35,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0.0", "ruff>=0.4.0"]
-# scripts/06_llm_judge.py only. No result in the paper depends on it.
-judge = ["openai>=1.0.0"]
+# scripts/06_llm_judge.py only. Pinned to the versions recorded in
+# results/llm_judge/run_manifest.json, which produced the committed labels.
+judge = ["openai==3.29.0", "pydantic==2.14.1"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
