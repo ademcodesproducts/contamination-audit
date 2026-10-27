@@ -9,7 +9,7 @@ description = "Label-free evaluation of decontamination filters using temporal n
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
-authors = [{ name = "Anonymous Authors" }]
+authors = [{ name = "Arno Demarteau" }, { name = "Rishbha Jain" }]
 keywords = ["nlp", "benchmark-contamination", "decontamination", "evaluation"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
