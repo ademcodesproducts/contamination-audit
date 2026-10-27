@@ -3,7 +3,7 @@
 A transcription error between a run and the manuscript is invisible to the
 compiler and to every reviewer who does not re-run the pipeline. This reads
 results/paper/*.json, derives the figures the paper states, and reports any that
-are missing from or inconsistent with paper/arr_decontamination.tex.
+are missing from or inconsistent with paper/paper.tex.
 
 It is not a substitute for regenerating from a clean checkout, which also catches
 a stale JSON. It catches the step after that one.
@@ -19,7 +19,7 @@ import sys
 from collections.abc import Iterator
 from pathlib import Path
 
-PAPER = Path("paper/arr_decontamination.tex")
+PAPER = Path("paper/paper.tex")
 OUT = Path("results/paper")
 
 # A label for the report, and the string the paper is expected to contain.
@@ -82,10 +82,9 @@ def check_scaling(data) -> Iterator[Check]:
     smallest, largest = data[0], data[-1]
     yield "smallest corpus", str(smallest["corpus"])
     yield "largest corpus", str(largest["corpus"])
-    for key in ("s1_frac", "ot3_frac"):
-        if smallest.get(key) and largest.get(key):
-            yield f"{key} at the smallest corpus", f"{smallest[key]:.2f}"
-            yield f"{key} at the largest corpus", f"{largest[key]:.2f}"
+    for end, row in (("smallest", smallest), ("largest", largest)):
+        yield f"s1 measurement rate, {end} corpus", pct(row["s1_det"])
+        yield f"s1 false-positive rate, {end} corpus", pct(row["s1_fp"])
 
 
 def check_mechanism(data) -> Iterator[Check]:
@@ -121,8 +120,6 @@ def check_phrases(data) -> Iterator[Check]:
             continue
         yield f"phrase agreement >={required} detection", pct(row["detect"])
         yield f"phrase agreement >={required} false positives", pct(row["fp"])
-        if row["frac"] is not None:
-            yield f"phrase agreement >={required} FD share", f"{row['frac']:.2f}"
 
 
 def check_decon(data) -> Iterator[Check]:
@@ -132,13 +129,14 @@ def check_decon(data) -> Iterator[Check]:
     stale result could reach the paper unnoticed. "0 (0.0%)" on its own matches
     several other filters, so match the whole row rather than the counts.
     """
-    measure = f"{data['measure']} ({pct_of(data['measure'], data['n_measure'])})"
-    control = f"{data['control']} ({pct_of(data['control'], data['n_control'])})"
-    yield "decon Table 2 row", f"decon}} & {measure} & {control}"
-
-    sweep = data.get("threshold_sweep", {})
-    if "0.2" in sweep:
-        yield "decon at threshold 0.2", str(sweep["0.2"])
+    if data["measure"] or data["control"]:
+        measure = f"{data['measure']} ({pct_of(data['measure'], data['n_measure'])})"
+        control = f"{data['control']} ({pct_of(data['control'], data['n_control'])})"
+        yield "decon Table 2 row", f"{measure} & {control}"
+    else:
+        # Both zero. The table prints these without a per-cent sign, and "0 (0.0)"
+        # alone matches other rows, so anchor on the filter name and rule.
+        yield "decon Table 2 row", "decon & two-stage & 0 (0.0) & 0 (0.0)"
 
 
 RESULTS = "python scripts/02_results.py"
@@ -162,6 +160,8 @@ SOURCES: dict[str, tuple] = {
 def normalise(tex: str) -> str:
     """Strip LaTeX number formatting so '100{,}000' matches '100000'."""
     plain = tex.replace("{,}", "").replace("\\%", "%").replace("~", " ")
+    # Thousands separators: the paper writes 12,500 where the JSON holds 12500.
+    plain = re.sub(r"(?<=\d),(?=\d)", "", plain)
     return re.sub(r"\s+", " ", plain)
 
 

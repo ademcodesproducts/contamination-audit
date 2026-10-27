@@ -14,12 +14,12 @@
    "items": 1
   },
   {
-   "ngram": "let $a$ and $b$ be positive integers such",
+   "ngram": "is not divisible by the square of any",
    "docs": 67,
    "items": 1
   },
   {
-   "ngram": "is not divisible by the square of any",
+   "ngram": "let $a$ and $b$ be positive integers such",
    "docs": 67,
    "items": 1
   },
@@ -59,22 +59,22 @@
    "items": 6
   },
   {
-   "ngram": "find the number of positive integers $n$ less",
-   "docs": 6,
-   "items": 1
-  },
-  {
    "ngram": "+ b$, where $a$ and $b$ are real",
    "docs": 6,
    "items": 1
   },
   {
-   "ngram": "$m$ and $n$ are relatively prime positive integers.",
-   "docs": 5,
-   "items": 6
+   "ngram": "find the number of positive integers $n$ less",
+   "docs": 6,
+   "items": 1
   },
   {
-   "ngram": "and $n$ are relatively prime positive integers. find",
+   "ngram": "$\\alpha$ and $\\beta$ be complex numbers such that",
+   "docs": 5,
+   "items": 1
+  },
+  {
+   "ngram": "$m$ and $n$ are relatively prime positive integers.",
    "docs": 5,
    "items": 6
   }

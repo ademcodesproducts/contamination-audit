@@ -1,0 +1,33 @@
+{
+  "source": "candidate_matches.json",
+  "source_sha256": "f9514ab983cd9c5e7b333b3bfc403071d7c621a666d05fa278e039f06b171422",
+  "pairs": 565,
+  "pairs_sha256": "ab42a98df23391ece014e3bdf9239b1b4c817d1530f5d1f5257b6691e51fed6c",
+  "by_group": {
+    "measure": 451,
+    "control": 114
+  },
+  "retrieved_by": {
+    "ot3": 325,
+    "s1": 315,
+    "ot3_fuzzy75": 4,
+    "coverage_per_document": 6
+  },
+  "scope": "Distinct exact-text pairs from saved top-three candidates for flagged s1 and Qwen13 items, per-document coverage >0.5, and saved fuzzy candidates scoring >=75. Retains original benchmark memberships. Not all corpus matches; no new retrieval or filter runs.",
+  "control_pairs_sha256": "b64ead452623fcce220d86256e918b8d58793aca680a1a59b781c92f9ee8f97a",
+  "postprocessing_source_sha256": "34e3a6a446e5eab3d81f48ff7ea642d011bb12cb2e2f7d18b181688c6b150b1d",
+  "distinct_benchmark_questions": {
+    "measure": 198,
+    "control": 51
+  },
+  "evidence_scope": "Saved matched n-grams and scores plus original and corrected benchmark-item decisions. Missing saved pair matches for a method mean unavailable evidence, not a negative decision; only top-three matches were retained. N-gram strings are normalized or tokenizer-decoded displays, not necessarily verbatim substrings.",
+  "rules": {
+    "s1-8gram-word": "Any shared 8-gram of lowercased whitespace tokens.",
+    "ot3-13gram-qwen": "Any shared 13-gram of Qwen tokens (original run).",
+    "ot3-paper-or75": "Shared Qwen 13-gram OR raw-text RapidFuzz ratio >=75 (postprocessed variant).",
+    "tulu3-8gram-50pct": "Whitespace 8-grams cover >0.5 of benchmark tokens across the union of corpus documents (original implementation).",
+    "coverage-best-document-adaptation": "Whitespace 8-grams cover >0.5 of benchmark tokens within one document (postprocessed variant, still an adaptation).",
+    "ot114k-fuzz95": "Raw-text RapidFuzz ratio >=95.",
+    "decon-default": "Verified successful default Rust run returned zero; no per-pair scores are available here."
+  }
+}

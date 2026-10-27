@@ -1,4 +1,4 @@
-"""Regenerate every number reported in paper/arr_decontamination.tex.
+"""Regenerate every number reported in paper/paper.tex.
 
 Each stage writes one JSON file under results/paper/ and prints its figures the
 way the paper states them, so the two can be diffed. Stages are independent and
@@ -491,8 +491,13 @@ def stage_mechanism():
         f"{len(false_positives)}/{len(control_texts)} false positives"
     )
 
+    # most_common breaks ties by insertion order, and these n-grams were
+    # inserted while iterating a set, so equal counts came out in hash order and
+    # the file was not byte-identical between runs. Break ties on the phrase.
+    ranked = sorted(doc_count.items(), key=lambda kv: (-kv[1], kv[0]))[:15]
+
     top = []
-    for gram, docs in doc_count.most_common(15):
+    for gram, docs in ranked:
         phrase = " ".join(gram)
         top.append({"ngram": phrase, "docs": docs, "items": len(items_hit[gram])})
         print(f'  {docs:5d} docs, {len(items_hit[gram]):2d} items  "{phrase}"')
@@ -851,9 +856,6 @@ def stage_phrases():
     save("phrases", rows)
 
 
-# ----------------------------------------------------------- entry point
-
-# Ordered as the paper presents them; `--stage` runs one, no argument runs all.
 def stage_strata():
     """The control set's two genres, scored separately.
 
@@ -897,6 +899,10 @@ def stage_strata():
     (OUT / "strata.json").write_text(json.dumps(out, indent=1), encoding="utf-8")
     _log.info("wrote %s", OUT / "strata.json")
 
+
+# ----------------------------------------------------------- entry point
+
+# Ordered as the paper presents them; `--stage` runs one, no argument runs all.
 
 STAGES = {
     "main": stage_main,

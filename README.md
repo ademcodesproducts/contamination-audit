@@ -1,101 +1,119 @@
 # Decontaminated by Whose Standard?
 
-Code and data for the paper *Decontaminated by Whose Standard? Label-Free
-Measurement of Decontamination Filter Error*.
+Anonymous research artifact for *Decontaminated by Whose Standard? A Label-Free
+Evaluation of Decontamination Filters*.
 
-The paper runs several published benchmark-decontamination filters over the same
-training corpora and benchmarks, and measures how far they disagree. It also
-introduces a label-free way to measure a filter's false-positive rate: a
-benchmark published *after* a corpus was assembled cannot be in it, so any flag
-against such an item is an error that needs no annotation to identify.
+This repository contains published decontamination filter implementations,
+benchmark questions, saved results, and analysis scripts. Temporal controls use
+questions published after a training corpus was assembled to measure false
+positives under the paper's temporal assumption.
 
-Everything here runs on CPU. There is no model inference, no GPU requirement and
-no API key anywhere in the pipeline.
+## Contents
 
-## Layout
-
-| Path | What it holds |
+| Path | Contents |
 |---|---|
-| `src/contamination_audit/filters.py` | the filter implementations, one per published project |
-| `scripts/01_prepare_data.py` | fetches corpora and benchmark groups from HuggingFace |
-| `scripts/02_results.py` | regenerates every number the paper reports |
-| `scripts/03_run_decon.py` | wrapper for Ai2's `decon` (a separate Rust binary) |
-| `scripts/04_verify_numbers.py` | checks the paper's text against the regenerated JSON |
-| `scripts/05_figures.py` | redraws Figures 1 and 2 from the regenerated JSON |
-| `data/raw/bench_*.jsonl` | the benchmark groups (committed; small) |
-| `results/paper/*.json` | regenerated results, one file per paper section |
-| `tests/` | unit tests for the filters |
+| `src/contamination_audit/` | Filter implementations and utilities |
+| `scripts/01_prepare_data.py` | Downloads benchmarks, Dolci, and Nemotron |
+| `scripts/02_results.py` | Runs analyses and writes result JSON files |
+| `scripts/03_run_decon.py` | Runs the separately installed Ai2 decon binary |
+| `scripts/04_verify_numbers.py` | Checks an expected manuscript source |
+| `scripts/05_figures.py` | Generates scaling and tuning plots |
+| `scripts/06_prepare_judge_pairs.py` | Samples candidate pairs for the LLM judge |
+| `scripts/06_llm_judge.py` | Labels those pairs; needs `OPENAI_API_KEY` |
+| `scripts/06_summarize_judge.py` | Aggregates the labels reported in the paper |
+| `data/raw/bench_*.jsonl` | Benchmark groups, including later Nemotron controls |
+| `data/raw/olymmath_en_*.jsonl` | OlymMATH benchmark questions |
+| `results/paper/*.json` | Saved experiment outputs |
+| `results/llm_judge/` | Saved judge pairs, labels and run manifest |
+| `paper/paper.tex` | Manuscript source, checked by `04_verify_numbers.py` |
+| `paper/figures/*.pdf` | Saved scaling and tuning plots |
+| `tests/` | Tests of filter behavior |
 
-## The two benchmark groups
+Large downloaded training corpora are local caches and are excluded from the
+upload ZIP. Third-party names and dataset identifiers are retained for
+attribution and reproducibility.
 
-This split is the paper's method, and it is defined in `scripts/01_prepare_data.py`.
+## Installation
 
-- **Measurement**: benchmarks published *before* the corpus was assembled. A flag
-  here may be correct or incorrect.
-- **Control**: benchmarks published *after*. These cannot be in the corpus, so
-  every flag against them is a false positive by construction.
-
-The split is a function of the corpus, not a fixed list. Each corpus in the paper
-gets its own, derived from its release date: a benchmark that is a control for one
-corpus can be a measurement item for a later one.
-
-## Reproducing
-
-```bash
-pip install -e .
-make data        # streams the corpora; slow, and resumable if a connection drops
-make results     # regenerates results/paper/*.json and prints each figure
-make figures
-make verify      # confirms the paper's numbers match the regenerated JSON
-make test
-```
-
-`make results` prints each number in the form the paper states it, so the two can
-be diffed directly. Individual sections:
+Use Python 3.10 or newer. The included scripts run on CPU and do not require GPU
+inference or API keys. Dataset and tokenizer downloads require network access.
 
 ```bash
-python scripts/02_results.py --stage main        # the main comparison table
-python scripts/02_results.py --stage validate    # tests the control assumption
-python scripts/02_results.py --stage scaling     # Figure 1 (slowest, ~25 min)
-python scripts/02_results.py --stage tuning      # Figure 2
-python scripts/02_results.py --stage phrases     # Table 5, phrase agreement
-python scripts/02_results.py --stage matched     # matched competition pairs
-python scripts/02_results.py --stage nemotron    # third corpus
+python -m pip install -r requirements.txt
+python -m pip install -e . --no-deps
+python -m spacy download en_core_web_lg
+python -m pytest tests/ -q
 ```
 
-`--help` lists all eleven stages. Without `make`, the targets above are just the
-five numbered scripts, run in order.
+The requirements file includes spaCy for the Tulu tokenizer. Installing only the
+editable package does not install that dependency or its language model.
 
-### decon
+## Data and analyses
 
-Ai2's `decon` is deliberately **not** reimplemented here. Build and run the real one:
+Small benchmark files are included. Fetch the large Dolci and Nemotron corpora:
 
 ```bash
-git clone https://github.com/allenai/decon && cd decon && cargo build --release
-cd - && make decon DECON_BIN=decon/target/release/decon
+python scripts/01_prepare_data.py --nemotron
 ```
 
-This matters. An earlier attempt reproduced only its candidate-generation stage —
-any shared 5-gram over `cl100k` tokens, without the cluster expansion and weighted
-scoring — and that version flagged 199 of 200 items where the real binary flags 0.
-A two-stage filter cannot be approximated by its first stage. The registry marks
-partial implementations `faithful=False` and excludes them from comparisons.
+Run individual analyses:
 
-## Notes on reproduction
+```bash
+python scripts/02_results.py --stage main
+python scripts/02_results.py --stage consensus
+python scripts/02_results.py --stage validate
+python scripts/02_results.py --stage scaling
+python scripts/02_results.py --stage tuning
+python scripts/02_results.py --stage phrases
+python scripts/02_results.py --stage matched
+python scripts/02_results.py --stage nemotron
+python scripts/05_figures.py
+```
 
-- **Streaming is flaky.** `scripts/01_prepare_data.py` resumes by skipping rows
-  already on disk; rerun it if a pull drops.
-- **Corpus order matters.** Every scaling point takes the first *N* rows of the
-  corpus file, so a partial pull shifts every number. Complete the pull before
-  comparing against the paper.
-- **Runtimes are single-threaded Python.** Model tokenizers dominate; the largest
-  scaling point takes roughly 25 minutes.
-- **Determinism.** Bootstrapping is seeded, the filters are deterministic, and no
-  LLM is called anywhere. Where a stage reports an example n-gram it ties-breaks
-  lexicographically, because set iteration order varies with `PYTHONHASHSEED`.
-- **Figures read the JSON.** Both figures are drawn from `results/paper/*.json`
-  rather than transcribed constants, so they cannot drift from the tables.
+`python scripts/02_results.py --help` lists all twelve stages. Some stages read
+earlier results; preserve the included JSON files when running a subset. Running
+without `--stage` executes every stage and requires all input corpora.
 
-## Licence
+The existing `second` stage also expects `data/raw/tulu_math.jsonl`, containing a
+`problem` field on each record. The preparation script does not download this
+file. Its saved results are included in `results/paper/second_corpus.json`;
+regeneration requires supplying the corresponding Tulu mathematics corpus in
+its original order.
 
-MIT, see `LICENSE`.
+The included CPU pipeline does not reproduce the manuscript's supplementary LLM
+judge annotations. The scripts are provided unchanged for subsequent code review.
+
+## decon
+
+Ai2's decon is an external Rust program:
+
+```bash
+git clone https://github.com/allenai/decon
+cd decon
+cargo build --release
+cd ..
+python scripts/03_run_decon.py --decon-bin decon/target/release/decon
+```
+
+Saved outputs are in `results/paper/decon.json`. Working copies of corpora and
+reports under `results/paper/decon_run/` are generated locally and excluded.
+
+## Reproduction notes
+
+- Corpus order matters: scaling uses nested prefixes, with up to 390,000 Dolci
+  records. A different ordering can change the results.
+- Downloads are resumable. Complete the requested download before comparing
+  numbers.
+- Filters are deterministic and bootstrap calculations use fixed seeds.
+  Dataset and tokenizer versions can still affect reproducibility.
+- Figures read saved JSON outputs and write to `paper/figures/`.
+- `scripts/04_verify_numbers.py` expects `paper/paper.tex`.
+  That source is absent from the current artifact; `make verify` requires it.
+  The checker does not inspect the separately submitted PDF.
+- Makefile targets are conveniences for Unix-like environments; the Python
+  commands can also be run directly.
+
+## License
+
+The code is licensed under MIT; see `LICENSE`. Dataset and benchmark contents
+remain subject to their upstream licenses and terms.

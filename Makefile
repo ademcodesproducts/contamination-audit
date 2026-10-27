@@ -1,5 +1,7 @@
-# Reproduce the paper end to end. Everything runs on CPU: no GPU, no API keys,
-# and no model inference anywhere in the pipeline.
+# Reproduce the paper end to end. `make all` runs on CPU with no GPU, no API
+# keys and no model inference. The optional `judge` target is the one exception
+# and no result in the paper depends on it; its labels are already committed
+# under results/llm_judge/.
 #
 # decon is a separate Rust binary and is not vendored. To include it:
 #   git clone https://github.com/allenai/decon && cd decon && cargo build --release
@@ -8,7 +10,7 @@
 PY := python
 DECON_BIN ?= decon/target/release/decon
 
-.PHONY: help all data results figures verify decon test clean
+.PHONY: help all data results figures verify decon judge test clean
 
 help:  ## list the targets
 	@grep -hE '^[a-z-]+:.*##' $(MAKEFILE_LIST) \
@@ -31,6 +33,11 @@ verify:  ## check the paper's text against the regenerated JSON
 
 decon:  ## run Ai2's decon; needs DECON_BIN
 	$(PY) scripts/03_run_decon.py --decon-bin "$(DECON_BIN)"
+
+judge:  ## optional LLM labelling of candidate pairs; needs OPENAI_API_KEY
+	$(PY) scripts/06_prepare_judge_pairs.py
+	$(PY) scripts/06_llm_judge.py
+	$(PY) scripts/06_summarize_judge.py
 
 test:  ## unit tests for the filter implementations
 	$(PY) -m pytest tests/ -q

@@ -11,6 +11,9 @@ dist/
 .ruff_cache/
 
 .env
+.env.*
+.claude/
+.codex/
 .vscode/
 .idea/
 *.swp
@@ -36,6 +39,7 @@ data/raw/*.bak
 # a claim the paper makes, so they are tracked.
 !data/raw/bench_measure.jsonl
 !data/raw/bench_control.jsonl
+!data/raw/bench_control_post_may26.jsonl
 !data/raw/olymmath_en_hard.jsonl
 !data/raw/olymmath_en_easy.jsonl
 
@@ -56,3 +60,6 @@ results/embeddings/
 results/judge/
 results/ngram/
 results/traces/
+
+# Generated anonymous submission archives are uploaded separately.
+submission.zip

@@ -1,0 +1,30 @@
+{
+  "scope": "Independent same-model repeat with identical prompt; neither first-pass labels nor filter metadata were shown. Agreement measures consistency, not accuracy or ground truth. Primary labels are preserved.",
+  "random_sample": {
+    "pairs": 20,
+    "relationship_label_agreement": 19,
+    "same_problem_binary_agreement": 20,
+    "overlap_type_agreement": 19
+  },
+  "targeted_cases": {
+    "pairs": 0,
+    "relationship_label_agreement": 0,
+    "same_problem_binary_agreement": 0,
+    "overlap_type_agreement": 0
+  },
+  "all_reviewed": {
+    "pairs": 20,
+    "relationship_label_agreement": 19,
+    "same_problem_binary_agreement": 20,
+    "overlap_type_agreement": 19
+  },
+  "disagreement_pair_ids": [
+    "bc182fe1d7cdd5810848"
+  ],
+  "review_pass_needs_review": [],
+  "token_usage": {
+    "input_tokens": 16465,
+    "output_tokens": 10370,
+    "total_tokens": 26835
+  }
+}
