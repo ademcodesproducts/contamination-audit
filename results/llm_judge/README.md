@@ -4,7 +4,7 @@ This package contains the completed October 11, 2026 judge experiment: 565
 distinct benchmark/training text pairs and a same-model repeat of 20 pairs.
 The model received only the two question texts, without answers, filter names,
 scores, dates, or first-pass judgments. The exact prompt is in
-`scripts/06_llm_judge.py` and every saved response. The run used `gpt-6-astra`
+`run_judge.py` and every saved response. The run used `gpt-6-astra`
 with high reasoning effort; Python and SDK versions are in `run_manifest.json`.
 
 ## Results and scope
@@ -57,6 +57,7 @@ from the second pass. Primary labels are preserved after disagreements.
 
 | File | Contents |
 |---|---|
+| `run_judge.py` | The script that made the API calls, byte for byte as it ran |
 | `candidate_matches.json` | Frozen retrieval snapshot used to construct the inputs |
 | `pairs.jsonl` | All 565 inputs, pair IDs, memberships, scores, and matched spans |
 | `labels.jsonl` | Original responses, judgments, quotes, model, prompt, and usage |
@@ -76,24 +77,24 @@ control-pairs hash refers to the control-only subset of `pairs.jsonl`.
 
 ## Reproduce without API calls
 
-From the repository root, using only standard-library Python:
+From the repository root, with no API calls:
 
 ```bash
-python scripts/06_prepare_judge_pairs.py --output results/judge/rebuilt_pairs.jsonl
-cmp results/judge/rebuilt_pairs.jsonl results/llm_judge/pairs.jsonl
-python scripts/06_summarize_judge.py
+contamination-audit judge-pairs --output work/judge/rebuilt_pairs.jsonl
+cmp work/judge/rebuilt_pairs.jsonl results/llm_judge/pairs.jsonl
+contamination-audit judge-verify
 ```
 
-The first two commands reconstruct the 565 inputs byte-for-byte. The summary
-script verifies source/input/output hashes, the original judge script and
-prompt, pair alignment, quotes, the seeded repeat sample, and both saved
-summaries. To also write rebuilt summaries to a separate directory:
+The first two commands reconstruct the 565 inputs byte-for-byte. The third
+verifies the source, input and output hashes, the judge script and prompt, pair
+alignment, quotes, the seeded repeat sample, and both saved summaries. To also
+write the rebuilt summaries to a separate directory:
 
 ```bash
-python scripts/06_summarize_judge.py --output-dir results/judge/rebuilt_summaries
+contamination-audit judge-verify --output-dir work/judge/rebuilt_summaries
 ```
 
-Use fresh output paths; the scripts refuse to overwrite existing files.
+Use fresh output paths; both commands refuse to overwrite existing files.
 The pair builder checks the existing zero-result decon summary before attaching
 its historical negative item flags. It does not rerun any filter. This package
 starts from saved retrieval evidence, not from a re-download of the full corpus.
@@ -102,8 +103,8 @@ starts from saved retrieval evidence, not from a re-download of the full corpus.
 
 ```bash
 pip install -e '.[judge]'
-python scripts/06_llm_judge.py results/llm_judge/pairs.jsonl --output results/judge/new_labels.jsonl
-python scripts/06_llm_judge.py results/llm_judge/review_pairs.jsonl --output results/judge/new_review_labels.jsonl
+python results/llm_judge/run_judge.py results/llm_judge/pairs.jsonl --output work/judge/new_labels.jsonl
+python results/llm_judge/run_judge.py results/llm_judge/review_pairs.jsonl --output work/judge/new_review_labels.jsonl
 ```
 
 Set `OPENAI_API_KEY` in your environment first. These commands make paid API
@@ -112,5 +113,5 @@ default; a different model is a new experiment. `--limit 50 --seed 42` selects a
 smaller input sample, not deterministic model generation. New responses may
 differ even with the same model. The verification command above checks the
 frozen published responses; it does not expect new responses to match them.
-New outputs go to the ignored `results/judge/` directory so they do not replace
+Write new outputs under the ignored `work/` directory so they do not replace
 the published evidence.

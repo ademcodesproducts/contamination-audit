@@ -1,10 +1,11 @@
-"""contamination_audit -- label-free measurement of decontamination filter error.
+"""Label-free evaluation of decontamination filters.
 
-Reimplements published decontamination filters and runs them against benchmarks
-that postdate the corpus under test. A flag against such a benchmark is provably
-a false positive, which makes filter error measurable without annotation.
+Reimplements the decontamination filters released with open post-training
+datasets and runs them against benchmark questions published after each corpus
+was assembled. Those questions cannot be in the corpus, so any filter that
+flags one is wrong, which makes filter error measurable without annotation.
 
-Entry points are the numbered scripts in ``scripts/``; see the README.
+Start with the `contamination-audit` command; see the README.
 """
 
 __version__ = "1.0.0"

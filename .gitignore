@@ -1,65 +1,35 @@
 # Python
-venv/
-.venv/
 __pycache__/
 *.py[cod]
 *.egg-info/
 build/
 dist/
+.venv/
+venv/
 .pytest_cache/
-.mypy_cache/
 .ruff_cache/
+.mypy_cache/
 
-.env
-.env.*
-.claude/
-.codex/
+# Editors, operating systems, local tools
 .vscode/
 .idea/
+.claude/
+.codex/
 *.swp
 .DS_Store
 Thumbs.db
 
-# LaTeX intermediates
-*.aux
-*.bbl
-*.blg
-*.fdb_latexmk
-*.fls
-*.log
-*.out
-*.synctex.gz
-*.toc
+# Secrets, such as the OpenAI key for new judge runs
+.env
+.env.*
 
-# Corpora: ~1.5GB across the three, re-fetched by scripts/01_prepare_data.py.
-data/raw/*.jsonl
-data/raw/*.bak
+# Training corpora, about 1.5 GB, downloaded by `contamination-audit fetch`
+data/corpora/
 
-# The benchmark groups are small, and which items are in which group is itself
-# a claim the paper makes, so they are tracked.
-!data/raw/bench_measure.jsonl
-!data/raw/bench_control.jsonl
-!data/raw/bench_control_post_may26.jsonl
-!data/raw/olymmath_en_hard.jsonl
-!data/raw/olymmath_en_easy.jsonl
-
-# decon's own copies of the corpus and evals (78MB), written by
-# scripts/03_run_decon.py. Its summary, results/paper/decon.json, is tracked.
-results/paper/decon_run/
-
-# Reference PDFs, kept locally for context; not part of the artifact.
-Literature/
-
-# Local scratch notes.
-REFACTOR_NOTES.md
-
-# Outputs of the earlier model-side pipeline, which this branch does not
-# contain. Kept on disk because the judge results are API calls that do not
-# regenerate deterministically; not part of the artifact.
-results/embeddings/
+# Scratch: decon's working copies, and outputs of new judge runs, which
+# run_judge.py writes to results/judge/ by default
+work/
 results/judge/
-results/ngram/
-results/traces/
 
-# Generated anonymous submission archives are uploaded separately.
-submission.zip
+# Reference papers kept for reading, not distributed
+Literature/

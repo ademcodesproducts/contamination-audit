@@ -4,44 +4,52 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "contamination-audit"
-version = "0.1.0"
-description = "Label-free measurement of decontamination filter error using temporal negative controls."
+version = "1.0.0"
+description = "Label-free evaluation of decontamination filters using temporal negative controls."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [{ name = "Anonymous Authors" }]
 keywords = ["nlp", "benchmark-contamination", "decontamination", "evaluation"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dependencies = [
     "datasets>=2.18.0",
     "transformers>=4.40.0",
     "tiktoken>=0.6.0",
-    # The spaCy model the Tulu filter tokenises with is not on PyPI:
+    # Tulu 3's tokenizer also needs a spaCy model, which is not on PyPI:
     #     python -m spacy download en_core_web_lg
     "spacy>=3.7.0",
     "rapidfuzz>=3.0.0",
     "numpy>=1.24.0",
-    "matplotlib>=3.8.0",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0.0", "ruff>=0.4.0"]
-# scripts/06_llm_judge.py only. Pinned to the versions recorded in
-# results/llm_judge/run_manifest.json, which produced the committed labels.
+# Only for results/llm_judge/run_judge.py, which makes paid API calls. Pinned to
+# the versions in results/llm_judge/run_manifest.json, which made the saved labels.
 judge = ["openai==3.29.0", "pydantic==2.14.1"]
+
+[project.scripts]
+contamination-audit = "contamination_audit.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-python_files = "test_*.py"
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+# The frozen judge script is checked against a SHA-256 hash, so it is never reformatted.
+extend-exclude = ["results/llm_judge/run_judge.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
