@@ -1,0 +1,7 @@
+# This repository is a reproducibility artifact, so checked-out bytes must match
+# committed bytes exactly. scripts/06_summarize_judge.py verifies pairs.jsonl,
+# labels.jsonl and 06_llm_judge.py itself against the SHA256 hashes recorded in
+# results/llm_judge/run_manifest.json. Under core.autocrlf git rewrites line
+# endings on checkout, which changes those hashes and ships corrupted copies in
+# the artifact archive. Disable end-of-line conversion for everything.
+* -text

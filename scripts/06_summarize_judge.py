@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def read_rows(path):
-    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
 def sha256(path):
@@ -112,9 +112,9 @@ def main():
     inputs = read_rows(folder / "pairs.jsonl")
     rows = read_rows(folder / "labels.jsonl")
     reviews = read_rows(folder / "review_labels.jsonl")
-    sample = json.loads((folder / "review_random_sample.json").read_text())
-    manifest = json.loads((folder / "run_manifest.json").read_text())
-    source_manifest = json.loads((folder / "input_manifest.json").read_text())
+    sample = json.loads((folder / "review_random_sample.json").read_text(encoding="utf-8"))
+    manifest = json.loads((folder / "run_manifest.json").read_text(encoding="utf-8"))
+    source_manifest = json.loads((folder / "input_manifest.json").read_text(encoding="utf-8"))
     by_id = {r["pair_id"]: r for r in inputs}
     assert len(by_id) == len(inputs)
     assert [r["pair_id"] for r in rows] == list(by_id)
@@ -138,7 +138,7 @@ def main():
         "review_summary.json": summarize_review(rows, reviews, sample),
     }
     for name, result in outputs.items():
-        assert result == json.loads((folder / name).read_text()), f"Saved {name} differs"
+        assert result == json.loads((folder / name).read_text(encoding="utf-8")), f"Saved {name} differs"
         if args.output_dir:
             args.output_dir.mkdir(parents=True, exist_ok=True)
             with (args.output_dir / name).open("x", encoding="utf-8") as output:

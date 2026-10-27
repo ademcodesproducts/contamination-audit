@@ -96,9 +96,9 @@ def main():
     parser.add_argument("--source", type=Path, default=ROOT / "results/llm_judge/candidate_matches.json")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    decon = json.loads((ROOT / "results/paper/decon.json").read_text())
+    decon = json.loads((ROOT / "results/paper/decon.json").read_text(encoding="utf-8"))
     assert decon["measure"] == decon["control"] == 0, "This snapshot requires the saved zero-result decon run"
-    pairs = build_pairs(json.loads(args.source.read_text()))
+    pairs = build_pairs(json.loads(args.source.read_text(encoding="utf-8")))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("x", encoding="utf-8") as output:
         for pair in pairs:
