@@ -158,7 +158,7 @@ If an unrelated package has upgraded it, imports fail; reinstall it with
 ```bibtex
 @article{decontaminated-by-whose-standard,
   title  = {Decontaminated by Whose Standard? A Label-Free Evaluation of Decontamination Filters},
-  author = {},
+  author = {Demarteau Arno, Rishbha Jain},
   year   = {2026},
   journal = {arXiv preprint arXiv:XXXX.XXXXX},
 }
