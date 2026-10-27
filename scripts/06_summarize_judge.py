@@ -141,7 +141,7 @@ def main():
         assert result == json.loads((folder / name).read_text(encoding="utf-8")), f"Saved {name} differs"
         if args.output_dir:
             args.output_dir.mkdir(parents=True, exist_ok=True)
-            with (args.output_dir / name).open("x", encoding="utf-8") as output:
+            with (args.output_dir / name).open("x", encoding="utf-8", newline="") as output:
                 output.write(json.dumps(result, indent=2) + "\n")
     print(f"Verified {len(rows)} judgments and {len(reviews)} repeats; both summaries match.")
     print(json.dumps(outputs["summary.json"]["labels"]))

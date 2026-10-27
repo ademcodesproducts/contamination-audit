@@ -100,7 +100,7 @@ def main():
     assert decon["measure"] == decon["control"] == 0, "This snapshot requires the saved zero-result decon run"
     pairs = build_pairs(json.loads(args.source.read_text(encoding="utf-8")))
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    with args.output.open("x", encoding="utf-8") as output:
+    with args.output.open("x", encoding="utf-8", newline="") as output:
         for pair in pairs:
             output.write(json.dumps(pair, ensure_ascii=False) + "\n")
     print(f"Wrote {len(pairs)} pairs to {args.output}")
