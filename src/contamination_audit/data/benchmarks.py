@@ -12,13 +12,15 @@ corpus therefore names its own split rule; see `corpora.py`.
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from datetime import date
 from pathlib import Path
 from typing import Any
 
 from ..errors import MissingDataError
-from ..jsonio import read_jsonl
+from ..jsonio import read_json, read_jsonl
 
 # MathArena competitions held on or before September 2025, which could be inside
 # a corpus assembled by October 2025.
@@ -57,6 +59,11 @@ LATE_CONTROL_COMPETITIONS = (
     "arxivlean-0626",
 )
 
+# Earlier editions of the competitions whose 2026 edition is a control. They are
+# not part of the main measurement set; the matched comparison pits each series
+# against its own 2026 edition, written to the same conventions.
+EARLIER_EDITIONS = ("aime_2023_I", "aime_2023_II", "hmmt_feb_2023", "usamo_2024", "usamo_2025")
+
 # Tulu 3 shipped in November 2024, so only the 2024 competitions predate it.
 COMPETITIONS_2024 = frozenset({"aime_2024_I", "aime_2024_II", "hmmt_feb_2024"})
 
@@ -76,6 +83,14 @@ OLYMMATH_FILES = ("olymmath_en_hard.jsonl", "olymmath_en_easy.jsonl")
 MEASUREMENT_FILE = "matharena_measurement.jsonl"
 CONTROL_FILE = "matharena_control.jsonl"
 LATE_CONTROL_FILE = "matharena_control_post_may2026.jsonl"
+EARLIER_EDITIONS_FILE = "matharena_earlier_editions.jsonl"
+ARXIV_DATES_FILE = "arxiv_first_posted.json"
+
+
+def arxiv_paper(source: str | None) -> str | None:
+    """The arXiv paper a source names, without any version suffix, or None."""
+    found = re.fullmatch(r"(\d{4}\.\d{5})(v\d+)?", source or "")
+    return found.group(1) if found else None
 
 
 @dataclass(frozen=True)
@@ -84,6 +99,8 @@ class BenchmarkItem:
     benchmark: str
     problem: str
     answer: str = ""
+    source: str | None = None  # the arXiv paper a research question comes from
+    first_posted: date | None = None  # when that paper first appeared on arXiv
 
     @classmethod
     def from_record(cls, record: dict[str, Any], benchmark: str | None = None):
@@ -92,6 +109,7 @@ class BenchmarkItem:
             benchmark=benchmark or record["benchmark"],
             problem=record["problem"],
             answer=str(record.get("answer", "")),
+            source=record.get("source"),
         )
 
 
@@ -120,6 +138,7 @@ class BenchmarkLibrary:
     measurement: tuple[BenchmarkItem, ...]
     control: tuple[BenchmarkItem, ...]
     late_control: tuple[BenchmarkItem, ...]
+    earlier_editions: tuple[BenchmarkItem, ...]
 
     @classmethod
     def load(cls, directory: Path) -> BenchmarkLibrary:
@@ -131,11 +150,33 @@ class BenchmarkLibrary:
                 )
             return tuple(BenchmarkItem.from_record(r, benchmark) for r in read_jsonl(path))
 
-        return cls(
+        library = cls(
             olymmath=sum((items(f, "olymmath") for f in OLYMMATH_FILES), ()),
             measurement=items(MEASUREMENT_FILE),
             control=items(CONTROL_FILE),
             late_control=items(LATE_CONTROL_FILE),
+            earlier_editions=items(EARLIER_EDITIONS_FILE),
+        )
+        dates_path = directory / ARXIV_DATES_FILE
+        return library.with_dates(read_json(dates_path) if dates_path.exists() else {})
+
+    def with_dates(self, first_posted: dict[str, str]) -> BenchmarkLibrary:
+        """The library with each item's source-paper date filled in, where known."""
+
+        def dated(items):
+            return tuple(
+                replace(item, first_posted=date.fromisoformat(first_posted[paper]))
+                if (paper := arxiv_paper(item.source)) in first_posted
+                else item
+                for item in items
+            )
+
+        return BenchmarkLibrary(
+            olymmath=self.olymmath,
+            measurement=dated(self.measurement),
+            control=dated(self.control),
+            late_control=dated(self.late_control),
+            earlier_editions=self.earlier_editions,
         )
 
     def matharena_by_competition(self) -> dict[str, list[BenchmarkItem]]:
