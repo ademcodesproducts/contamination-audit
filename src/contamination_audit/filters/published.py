@@ -14,7 +14,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import Enum
 
-from .rules import FuzzyRatio, MatchingRule, SharedNgram, TokenCoverage
+from .rules import FuzzyRatio, Matches, MatchingRule, SharedNgram, TokenCoverage
 from .tokenizers import CL100K, QWEN2, S1_WORDS, SPACY_LG
 
 
@@ -33,6 +33,9 @@ class PublishedFilter:
     # A partial reimplementation must never sit in a table beside complete
     # ones, where its number would be read as that project's behaviour.
     faithful: bool = True
+
+    def match(self, corpus: Sequence[str], benchmark: Sequence[str]) -> Matches:
+        return self.rule.match(corpus, benchmark)
 
     def flag(self, corpus: Sequence[str], benchmark: Sequence[str]) -> set[int]:
         return self.rule.flag(corpus, benchmark)

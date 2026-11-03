@@ -16,6 +16,7 @@ costs only the n-grams it actually shares with the benchmark.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections import Counter
 from collections.abc import Hashable, Sequence
 from dataclasses import dataclass
 
@@ -29,16 +30,26 @@ def ngrams(tokens: Sequence[Hashable], n: int) -> set[NGram]:
     return {tuple(tokens[i : i + n]) for i in range(len(tokens) - n + 1)}
 
 
+Matches = dict[int, set[int]]  # training document index -> benchmark items it matches
+
+
 class MatchingRule(ABC):
     """A way of deciding which benchmark items a corpus contaminates.
 
-    Every rule decides each benchmark item on its own: whether item i is
-    flagged never depends on which other items are being checked.
+    A rule decides, for each training document, which benchmark items it
+    matches. An item is flagged when any document matches it, and a filter
+    removes every document that matches something. Rules decide each benchmark
+    item on its own: whether item i is flagged never depends on which other
+    items are being checked.
     """
 
     @abstractmethod
+    def match(self, corpus: Sequence[str], benchmark: Sequence[str]) -> Matches:
+        """For each training document that matches anything, the items it matches."""
+
     def flag(self, corpus: Sequence[str], benchmark: Sequence[str]) -> set[int]:
         """Indices of the benchmark items this rule finds in the corpus."""
+        return set().union(*self.match(corpus, benchmark).values())
 
     def flag_groups(self, corpus: Sequence[str], *groups: Sequence[str]) -> list[set[int]]:
         """Flag several benchmarks with a single pass over the corpus.
@@ -66,21 +77,24 @@ class SharedNgram(MatchingRule):
     n: int
     tokenizer: Tokenizer
 
-    def flag(self, corpus, benchmark):
+    def match(self, corpus, benchmark):
         items_with: dict[NGram, set[int]] = {}
         for item, text in enumerate(benchmark):
             for gram in ngrams(self.tokenizer(text), self.n):
                 items_with.setdefault(gram, set()).add(item)
 
-        flagged: set[int] = set()
-        for document in corpus:
+        matches: Matches = {}
+        for index, document in enumerate(corpus):
             if not document.strip():
                 continue
+            matched: set[int] = set()
             for gram in ngrams(self.tokenizer(document), self.n):
                 hit = items_with.get(gram)
                 if hit:
-                    flagged |= hit
-        return flagged
+                    matched |= hit
+            if matched:
+                matches[index] = matched
+        return matches
 
 
 def best_fuzzy_scores(corpus: Sequence[str], benchmark: Sequence[str], floor: float):
@@ -91,10 +105,32 @@ def best_fuzzy_scores(corpus: Sequence[str], benchmark: Sequence[str], floor: fl
     millions of interpreter steps to find a handful of hits.
     """
     import numpy as np
+
+    best = np.zeros(len(benchmark))
+    for _, scores in fuzzy_score_chunks(corpus, benchmark, floor):
+        best = np.maximum(best, scores.max(axis=0))
+    return best
+
+
+# Documents scored per rapidfuzz call. The score matrix is documents by items,
+# so an unchunked call on two million documents would need several gigabytes.
+FUZZY_CHUNK = 50_000
+
+
+def fuzzy_score_chunks(corpus: Sequence[str], benchmark: Sequence[str], floor: float):
+    """The corpus-by-benchmark fuzz.ratio matrix, a block of documents at a time.
+
+    Yields (index of the block's first document, its scores); scores below
+    `floor` read 0.
+    """
+    import numpy as np
     from rapidfuzz import fuzz, process
 
-    scores = process.cdist(corpus, benchmark, scorer=fuzz.ratio, score_cutoff=floor, workers=-1)
-    return np.asarray(scores).max(axis=0)
+    for start in range(0, len(corpus), FUZZY_CHUNK):
+        block = corpus[start : start + FUZZY_CHUNK]
+        # Scores stay floating point: rounding 94.6 up to 95 would pass a cutoff of 95.
+        scores = process.cdist(block, benchmark, scorer=fuzz.ratio, score_cutoff=floor, workers=-1)
+        yield start, np.asarray(scores)
 
 
 @dataclass(frozen=True)
@@ -106,11 +142,15 @@ class FuzzyRatio(MatchingRule):
 
     threshold: float
 
-    def flag(self, corpus, benchmark):
-        if not corpus:
-            return set()
-        best = best_fuzzy_scores(corpus, benchmark, floor=self.threshold)
-        return set((best >= self.threshold).nonzero()[0].tolist())
+    def match(self, corpus, benchmark):
+        import numpy as np
+
+        matches: Matches = {}
+        for start, scores in fuzzy_score_chunks(corpus, benchmark, self.threshold):
+            documents, items = np.nonzero(scores >= self.threshold)
+            for document, item in zip(documents.tolist(), items.tolist(), strict=True):
+                matches.setdefault(start + document, set()).add(item)
+        return matches
 
 
 @dataclass(frozen=True)
@@ -128,7 +168,7 @@ class TokenCoverage(MatchingRule):
     threshold: float
     tokenizer: Tokenizer
 
-    def flag(self, corpus, benchmark):
+    def match(self, corpus, benchmark):
         item_tokens = [self.tokenizer(text) for text in benchmark]
 
         # Each n-gram maps to the (item, first position) pairs it starts, so a
@@ -139,23 +179,23 @@ class TokenCoverage(MatchingRule):
                 gram = tuple(tokens[start : start + self.n])
                 spans_of.setdefault(gram, set()).add((item, start))
 
-        best_covered: dict[int, int] = {}
-        for document in corpus:
+        matches: Matches = {}
+        for index, document in enumerate(corpus):
             if not document.strip():
                 continue
             covered: dict[int, set[int]] = {}
             for gram in ngrams(self.tokenizer(document), self.n):
                 for item, start in spans_of.get(gram, ()):
                     covered.setdefault(item, set()).update(range(start, start + self.n))
-            for item, positions in covered.items():
-                best_covered[item] = max(best_covered.get(item, 0), len(positions))
-
-        # Strictly greater: Tulu 3's paper says "greater than 50%".
-        return {
-            item
-            for item, covered in best_covered.items()
-            if item_tokens[item] and covered / len(item_tokens[item]) > self.threshold
-        }
+            # Strictly greater: Tulu 3's paper says "greater than 50%".
+            matched = {
+                item
+                for item, positions in covered.items()
+                if len(positions) / len(item_tokens[item]) > self.threshold
+            }
+            if matched:
+                matches[index] = matched
+        return matches
 
 
 @dataclass(frozen=True)
@@ -187,7 +227,7 @@ class PhraseAgreement(MatchingRule):
         step = len(windows) / self.phrases
         return [windows[int(i * step)] for i in range(self.phrases)]
 
-    def flag(self, corpus, benchmark):
+    def match(self, corpus, benchmark):
         phrase_slots: dict[NGram, set[tuple[int, int]]] = {}
         sampled_per_item: list[int] = []
         for item, text in enumerate(benchmark):
@@ -196,24 +236,71 @@ class PhraseAgreement(MatchingRule):
             for slot, phrase in enumerate(sampled):
                 phrase_slots.setdefault(phrase, set()).add((item, slot))
 
-        # Agreement is counted within one document, then maximised over
-        # documents, so unrelated documents cannot each contribute a phrase.
-        best_found: dict[int, int] = {}
-        for document in corpus:
+        # Agreement is counted within one document, so unrelated documents
+        # cannot each contribute a phrase.
+        matches: Matches = {}
+        for index, document in enumerate(corpus):
             if not document.strip():
                 continue
             found: dict[int, set[int]] = {}
             for gram in ngrams(self.tokenizer(document), self.n):
                 for item, slot in phrase_slots.get(gram, ()):
                     found.setdefault(item, set()).add(slot)
-            for item, slots in found.items():
-                best_found[item] = max(best_found.get(item, 0), len(slots))
+            matched = {
+                item
+                for item, slots in found.items()
+                if len(slots) / sampled_per_item[item] >= self.required_fraction
+            }
+            if matched:
+                matches[index] = matched
+        return matches
 
-        return {
-            item
-            for item, found in best_found.items()
-            if sampled_per_item[item] and found / sampled_per_item[item] >= self.required_fraction
-        }
+
+def shared_ngrams(
+    corpus: Sequence[str], items_with: dict[NGram, set[int]], n: int, tokenizer: Tokenizer
+) -> dict[int, set[NGram]]:
+    """For each document, the benchmark n-grams it contains."""
+    shared: dict[int, set[NGram]] = {}
+    for index, document in enumerate(corpus):
+        if document.strip():
+            found = {gram for gram in ngrams(tokenizer(document), n) if gram in items_with}
+            if found:
+                shared[index] = found
+    return shared
+
+
+@dataclass(frozen=True)
+class RareSharedNgram(MatchingRule):
+    """Flag an item on a shared n-gram only if few training documents contain it.
+
+    The false positives of n-gram filters come from conventional phrasing, such
+    as "let m and n be relatively prime positive integers", which appears in
+    many documents. The spans specific to one problem appear in few. Ignoring
+    n-grams found in more than `max_documents` documents drops the convention
+    and keeps the problem. Document frequency is counted on the corpus being
+    filtered, so the rule needs no list or labels.
+    """
+
+    n: int
+    tokenizer: Tokenizer
+    max_documents: int
+
+    def match(self, corpus, benchmark):
+        items_with: dict[NGram, set[int]] = {}
+        for item, text in enumerate(benchmark):
+            for gram in ngrams(self.tokenizer(text), self.n):
+                items_with.setdefault(gram, set()).add(item)
+
+        shared = shared_ngrams(corpus, items_with, self.n, self.tokenizer)
+        frequency = Counter(gram for grams in shared.values() for gram in grams)
+        matches: Matches = {}
+        for index, grams in shared.items():
+            matched = set().union(
+                *(items_with[gram] for gram in grams if frequency[gram] <= self.max_documents)
+            )
+            if matched:
+                matches[index] = matched
+        return matches
 
 
 @dataclass(frozen=True)
@@ -222,8 +309,12 @@ class AnyOf(MatchingRule):
 
     rules: tuple[MatchingRule, ...]
 
-    def flag(self, corpus, benchmark):
-        return set().union(*(rule.flag(corpus, benchmark) for rule in self.rules))
+    def match(self, corpus, benchmark):
+        combined: Matches = {}
+        for rule in self.rules:
+            for document, items in rule.match(corpus, benchmark).items():
+                combined.setdefault(document, set()).update(items)
+        return combined
 
     def __or__(self, other: MatchingRule) -> AnyOf:
         return AnyOf((*self.rules, other))

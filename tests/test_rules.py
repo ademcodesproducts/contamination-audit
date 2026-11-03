@@ -12,6 +12,7 @@ from contamination_audit.filters import (
     AnyOf,
     FuzzyRatio,
     PhraseAgreement,
+    RareSharedNgram,
     SharedNgram,
     TokenCoverage,
     ngrams,
@@ -179,3 +180,36 @@ def test_flagging_groups_together_equals_flagging_them_apart(rule):
         rule.flag(corpus, first),
         rule.flag(corpus, second),
     ]
+
+
+# ------------------------------------------------------------------- documents
+
+
+def test_match_reports_which_documents_match_which_items():
+    corpus = ["nothing", FOX, "", FOX + " again"]
+    assert SharedNgram(8, S1_WORDS).match(corpus, ["x", FOX]) == {1: {1}, 3: {1}}
+
+
+def test_rare_ngrams_ignore_phrases_common_across_the_corpus():
+    stock = "let m and n be relatively prime positive integers"
+    item = f"{stock} and the distinctive tail of this one problem only"
+    corpus = [f"{stock} unrelated {i}" for i in range(5)]
+    assert SharedNgram(8, S1_WORDS).flag(corpus, [item]) == {0}
+    assert RareSharedNgram(8, S1_WORDS, max_documents=3).flag(corpus, [item]) == set()
+    leaked = corpus + [item]
+    assert RareSharedNgram(8, S1_WORDS, max_documents=3).flag(leaked, [item]) == {0}
+
+
+def test_fuzzy_matching_in_chunks_equals_matching_at_once(monkeypatch):
+    import random
+
+    import contamination_audit.filters.rules as rules
+
+    rng = random.Random(1)
+    words = "alpha beta gamma delta epsilon zeta eta theta iota kappa".split()
+    corpus = [" ".join(rng.choices(words, k=12)) for _ in range(300)]
+    benchmark = corpus[3:9] + [" ".join(rng.choices(words, k=12)) for _ in range(10)]
+    whole = FuzzyRatio(80).match(corpus, benchmark)
+    monkeypatch.setattr(rules, "FUZZY_CHUNK", 37)
+    assert FuzzyRatio(80).match(corpus, benchmark) == whole
+    assert 0 < len(whole) < len(corpus)
