@@ -7,14 +7,18 @@ result: `agreement` and `strata` both read `flag_counts`.
 
 from .agreement import FilterAgreement
 from .base import Experiment, Study
+from .collateral import CollateralLoss
 from .composition import Composition
 from .flag_counts import FlagCounts
 from .matched import MatchedCompetitions
 from .mechanism import Mechanism
 from .phrases import PhraseAgreementSweep
+from .planted import PlantedRecall
+from .provenance import ControlProvenance
+from .rare_ngrams import RareNgramEvaluation
 from .replication import NemotronReplication, Replication, TuluReplication
 from .scaling import Scaling
-from .strata import ControlStrata
+from .strata import Strata
 from .tuning import Tuning
 from .validation import ControlValidation
 
@@ -22,8 +26,10 @@ EXPERIMENTS: dict[str, type[Experiment]] = {
     experiment.name: experiment
     for experiment in (
         ControlValidation,
+        ControlProvenance,
         FlagCounts,
         FilterAgreement,
+        CollateralLoss,
         Scaling,
         TuluReplication,
         NemotronReplication,
@@ -31,7 +37,9 @@ EXPERIMENTS: dict[str, type[Experiment]] = {
         Mechanism,
         Tuning,
         PhraseAgreementSweep,
-        ControlStrata,
+        PlantedRecall,
+        RareNgramEvaluation,
+        Strata,
         Composition,
     )
 }

@@ -1,56 +1,66 @@
-"""The control set's two kinds of question, scored separately.
+"""Flag rates by kind of question, on both sides of the temporal split.
 
-The measurement set is almost entirely competition problems, but only 69 of
-the 280 controls are; the rest are questions derived from research papers.
-Pooling the two into one false-positive rate averages populations the filters
-treat very differently, weighted by which MathArena sets happen to exist.
+The pooled rates average over very different questions. The measurement set is
+OlymMATH plus competition problems; the control set is competition problems
+plus questions derived from research papers, which filters rarely flag. Pooled,
+the control rate reflects which MathArena sets happen to exist for 2026 more
+than how often a filter misfires on questions like those it is measuring.
+Comparing like with like means comparing competition problems on both sides.
 """
 
 from __future__ import annotations
 
 from collections import Counter
 
-from ..data import DOLCI
+from ..data import DOLCI, BenchmarkItem
 from .base import Experiment
-from .rates import Rate
-
-COMPETITIONS_2026 = frozenset({"aime_2026", "hmmt_feb_2026", "usamo_2026"})
-STRATA = ("competition", "research")
+from .rates import bootstrap_rate
 
 
-class ControlStrata(Experiment):
+def kind_of(item: BenchmarkItem) -> str:
+    if item.benchmark == "olymmath":
+        return "olymmath"
+    if item.benchmark.startswith(("arxiv", "brokenarxiv")):
+        return "research"
+    return "competition"
+
+
+class Strata(Experiment):
     name = "strata"
-    title = "Control false positives, competition problems versus research-derived questions"
+    title = "Flag rates by kind of question, measurement and control"
 
     def run(self):
         flag_counts = self.study.load_result("flag_counts")
-        control = self.study.split(DOLCI).control
-
-        stratum_of = [
-            "competition" if item.benchmark in COMPETITIONS_2026 else "research" for item in control
-        ]
-        sizes = Counter(stratum_of)
+        split = self.study.split(DOLCI)
+        kinds = {
+            "measure": [kind_of(item) for item in split.measurement],
+            "control": [kind_of(item) for item in split.control],
+        }
 
         filters = {}
         for name, flagged in flag_counts["filters"].items():
-            hits = Counter(stratum_of[i] for i in flagged["control"])
-            filters[name] = {
-                stratum: {
-                    "n": sizes[stratum],
-                    "flagged": hits[stratum],
-                    "pct": Rate(hits[stratum], sizes[stratum]).percent if sizes[stratum] else 0.0,
-                }
-                for stratum in STRATA
-            }
-        return {"sizes": dict(sizes), "filters": filters}
+            filters[name] = {}
+            for group, group_kinds in kinds.items():
+                hit = set(flagged[group])
+                filters[name][group] = {}
+                for kind in sorted(set(group_kinds)):
+                    members = [i for i, k in enumerate(group_kinds) if k == kind]
+                    within = {j for j, i in enumerate(members) if i in hit}
+                    rate = bootstrap_rate(within, len(members))
+                    filters[name][group][kind] = {"n": len(members), "flagged": len(within), **rate}
+        return {
+            "sizes": {group: dict(sorted(Counter(k).items())) for group, k in kinds.items()},
+            "filters": filters,
+        }
 
     def report(self, result):
-        sizes = result["sizes"]
-        lines = [
-            f"{'filter':28s} {'competition (' + str(sizes['competition']) + ')':>18s} "
-            f"{'research (' + str(sizes['research']) + ')':>18s}"
-        ]
-        for name, strata in result["filters"].items():
-            cells = [str(Rate(strata[s]["flagged"], strata[s]["n"])) for s in STRATA]
-            lines.append(f"{name:28s} {cells[0]:>18s} {cells[1]:>18s}")
+        lines = []
+        for name, groups in result["filters"].items():
+            cells = [
+                f"{group} {kind} {row['flagged']}/{row['n']} {row['pct']:.1f}% "
+                f"[{row['ci'][0]:.1f}, {row['ci'][1]:.1f}]"
+                for group, kinds in groups.items()
+                for kind, row in kinds.items()
+            ]
+            lines.append(f"{name}: " + ";  ".join(cells))
         return lines

@@ -17,6 +17,7 @@ from .rates import Rate, false_discovery_share
 
 class Replication(Experiment):
     corpus: ClassVar[TrainingCorpus]
+    decon_result: ClassVar[str]
 
     def run(self):
         documents = self.study.questions(self.corpus)
@@ -30,6 +31,19 @@ class Replication(Experiment):
             measurement = Rate(len(flagged_measurement), len(split.measurement))
             control = Rate(len(flagged_control), len(split.control))
             filters[published.name] = {
+                "detect": measurement.percent,
+                "fp": control.percent,
+                "n_detect": measurement.count,
+                "n_fp": control.count,
+                "fd_share": false_discovery_share(control, measurement),
+            }
+
+        # decon is a separate binary; include it when it has been run on these documents.
+        decon = self.study.decon_result(self.decon_result, len(documents))
+        if decon:
+            measurement = Rate(len(decon["measure"]), len(split.measurement))
+            control = Rate(len(decon["control"]), len(split.control))
+            filters["decon"] = {
                 "detect": measurement.percent,
                 "fp": control.percent,
                 "n_detect": measurement.count,
@@ -67,18 +81,21 @@ class TuluReplication(Replication):
     """
 
     name = "tulu"
+    decon_result = "decon_tulu"
     title = "Replication on the Tulu 3 math SFT data (100,000 documents)"
     corpus = TULU
 
 
 class NemotronReplication(Replication):
-    """Nemotron's May 2026 release falls between Dolci's two groups.
+    """Nemotron's June 2026 release falls between Dolci's two groups.
 
-    Everything published before May 2026 could be inside it and becomes
+    Everything published before then could be inside it and becomes
     measurement, including the early-2026 sets that are controls for Dolci.
-    Only sets from June 2026 onward can serve as its control.
+    Only sets from June 2026 onward can serve as its control, and of those only
+    the questions whose source paper appeared after the release.
     """
 
     name = "nemotron"
+    decon_result = "decon_nemotron"
     title = "Replication on Nemotron-SFT-Math-v4 (100,000 documents)"
     corpus = NEMOTRON

@@ -1,4 +1,4 @@
-"""How many benchmark items each published filter flags on the main corpus.
+"""How many benchmark items each published filter flags on the whole of Dolci.
 
 This is the paper's central table. Every control flag is a false positive by
 construction, since those items did not exist when the corpus was assembled.
@@ -13,25 +13,21 @@ from .rates import Rate
 
 class FlagCounts(Experiment):
     name = "flag_counts"
-    title = "Benchmark items flagged by each published filter (100,000 Dolci documents)"
+    title = "Benchmark items flagged by each published filter, on all of Dolci"
 
     def run(self):
-        corpus = self.study.questions(DOLCI)
         split = self.study.split(DOLCI)
-
         filters = {}
         for published in self.study.filters:
-            measurement, control = published.flag_groups(
-                corpus, split.measurement_texts, split.control_texts
-            )
+            scan = self.study.scan(published)
             filters[published.name] = {
                 "provenance": published.provenance.value,
-                "measure": sorted(measurement),
-                "control": sorted(control),
+                "measure": sorted(scan.flagged(split.measurement)),
+                "control": sorted(scan.flagged(split.control)),
             }
 
         return {
-            "corpus_n": len(corpus),
+            "corpus_n": scan.corpus_n,
             "n_measure": len(split.measurement),
             "n_control": len(split.control),
             "filters": filters,
@@ -45,11 +41,11 @@ class FlagCounts(Experiment):
             lines.append(f"{name:28s} {str(measurement):>14s} {str(control):>14s}")
 
         # decon is the fifth filter, run separately because it is a Rust binary.
-        if self.study.has_result("decon"):
-            decon = self.study.load_result("decon")
-            measurement = Rate(decon["measure"], result["n_measure"])
-            control = Rate(decon["control"], result["n_control"])
+        decon = self.study.decon_result("decon", result["corpus_n"])
+        if decon:
+            measurement = Rate(len(decon["measure"]), result["n_measure"])
+            control = Rate(len(decon["control"]), result["n_control"])
             lines.append(f"{'decon':28s} {str(measurement):>14s} {str(control):>14s}")
         else:
-            lines.append(f"{'decon':28s} not run; see `contamination-audit decon`")
+            lines.append(f"{'decon':28s} not run on this corpus; see `contamination-audit decon`")
         return lines

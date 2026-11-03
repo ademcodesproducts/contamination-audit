@@ -64,6 +64,9 @@ BENCHMARK_FILES = {
     "matharena_control_post_may2026.jsonl": [
         item("arxivmath-0826", 0, "a research question published long after every corpus"),
     ],
+    "matharena_earlier_editions.jsonl": [
+        item("aime_2023_I", 0, f"an older problem where {STOCK_PHRASE}"),
+    ],
 }
 
 CORPUS = [
@@ -93,7 +96,17 @@ def tiny_root(tmp_path: Path) -> Path:
         for i, text in enumerate(CORPUS)
     ]
     write_jsonl(tmp_path / "data" / "corpora" / "dolci.jsonl", documents)
-    decon = {"corpus_rows": len(CORPUS), "n_measure": 5, "n_control": 3, "measure": 0, "control": 0}
+    marker = {"dataset": "test", "revision": "test", "documents": len(CORPUS)}
+    (tmp_path / "data" / "corpora" / "dolci.complete.json").write_text(
+        json.dumps(marker), encoding="utf-8"
+    )
+    decon = {
+        "corpus_rows": len(CORPUS),
+        "n_measure": 5,
+        "n_control": 3,
+        "measure": [],
+        "control": [],
+    }
     (tmp_path / "results" / "paper").mkdir(parents=True)
     (tmp_path / "results" / "paper" / "decon.json").write_text(json.dumps(decon), encoding="utf-8")
     return tmp_path

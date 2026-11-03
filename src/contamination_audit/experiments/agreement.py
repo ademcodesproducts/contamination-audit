@@ -13,7 +13,6 @@ import random
 from collections import Counter
 from itertools import combinations
 
-from ..errors import MissingDataError
 from .base import Experiment
 from .rates import RESAMPLES, SEED, Rate, bootstrap_rate, central_interval
 
@@ -27,7 +26,9 @@ class FilterAgreement(Experiment):
         n_measure = flag_counts["n_measure"]
 
         flagged_by = {name: set(f["measure"]) for name, f in flag_counts["filters"].items()}
-        flagged_by["decon"] = self._decon_flags()
+        decon = self.study.decon_result("decon", flag_counts["corpus_n"])
+        if decon:
+            flagged_by["decon"] = set(decon["measure"])
 
         # How many filters flag each measurement item.
         votes = [sum(i in flagged for flagged in flagged_by.values()) for i in range(n_measure)]
@@ -35,6 +36,7 @@ class FilterAgreement(Experiment):
         n_flagged = sum(observed.values())
 
         return {
+            "filters": list(flagged_by),
             "flagged_any": n_flagged,
             "n": n_measure,
             "consensus": self._consensus(votes, observed, n_flagged, len(flagged_by)),
@@ -47,20 +49,6 @@ class FilterAgreement(Experiment):
                 for name, f in flag_counts["filters"].items()
             },
         }
-
-    def _decon_flags(self) -> set[int]:
-        """decon's measurement flags, which belong in the agreement denominator.
-
-        The decon runner records counts, not item indices. An empty set is right
-        exactly when that count is zero; otherwise agreement cannot be computed.
-        """
-        decon = self.study.load_result("decon")
-        if decon["measure"]:
-            raise MissingDataError(
-                f"decon flagged {decon['measure']} measurement items, but its result "
-                "records counts only; save the flagged indices before computing agreement"
-            )
-        return set()
 
     @staticmethod
     def _consensus(votes, observed, n_flagged, n_filters):

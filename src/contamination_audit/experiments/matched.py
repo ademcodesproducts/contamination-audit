@@ -1,59 +1,101 @@
-"""The same competitions one year apart.
+"""Each competition series against its own edition that postdates the corpus.
 
-The false-discovery share is an upper bound only if control and measurement
-items attract spurious matches equally often. That is testable directly: AIME
-2025 and AIME 2026 are written to the same conventions, and only one of them
-can be in the corpus. If a filter flags both at similar rates, most of what it
-flags on the older edition is stock phrasing too.
+Control and measurement items should attract spurious matches equally often,
+or the control rate says little about the measurement set. The cleanest way to
+get that is to hold the competition fixed: AIME 2023 to 2025 and AIME 2026 are
+written to the same conventions, and only the earlier editions can be in the
+corpus. Whatever a filter flags on AIME 2026 is noise, so its excess on the
+earlier editions is the most it can be detecting.
 """
 
 from __future__ import annotations
 
-from ..data import DOLCI
+from ..data import BenchmarkItem
 from ..errors import MissingDataError
-from ..filters import OPENTHOUGHTS3_NGRAM, S1
 from .base import Experiment
-from .rates import Rate
+from .rates import Rate, matched_comparison
 
-# (could be in the corpus, could not be)
-COMPETITION_PAIRS = (("aime_2025", "aime_2026"), ("hmmt_feb_2025", "hmmt_feb_2026"))
+# Each series: its editions that predate Dolci, and its edition that postdates it.
+SERIES = {
+    "aime": (
+        ("aime_2023_I", "aime_2023_II", "aime_2024_I", "aime_2024_II", "aime_2025"),
+        "aime_2026",
+    ),
+    "hmmt_feb": (("hmmt_feb_2023", "hmmt_feb_2024", "hmmt_feb_2025"), "hmmt_feb_2026"),
+    "usamo": (("usamo_2024", "usamo_2025"), "usamo_2026"),
+}
+
+
+def pooled(indicator: dict[str, list[int]], editions: tuple[str, ...]) -> list[int]:
+    """The flag indicators of several editions, as one group."""
+    return [flag for edition in editions for flag in indicator[edition]]
 
 
 class MatchedCompetitions(Experiment):
     name = "matched"
-    title = "Flag rates on the same competitions one year apart"
+    title = "Each competition series against its 2026 edition"
 
     def run(self):
-        corpus = self.study.questions(DOLCI)
-        by_competition = self.study.benchmarks.matharena_by_competition()
+        library = self.study.benchmarks
+        by_edition: dict[str, list[BenchmarkItem]] = {}
+        for item in library.measurement + library.control + library.earlier_editions:
+            by_edition.setdefault(item.benchmark, []).append(item)
 
-        sides = {}
-        for older, newer in COMPETITION_PAIRS:
-            sides.update({older: "measure", newer: "control"})
-        missing = [competition for competition in sides if competition not in by_competition]
+        editions = [e for earlier, later in SERIES.values() for e in (*earlier, later)]
+        missing = [e for e in editions if e not in by_edition]
         if missing:
             raise MissingDataError(f"no benchmark items for {', '.join(missing)}")
-        groups = [[item.problem for item in by_competition[c]] for c in sides]
 
-        s1_flags = S1.flag_groups(corpus, *groups)
-        ot3_flags = OPENTHOUGHTS3_NGRAM.flag_groups(corpus, *groups)
-        return {
-            competition: {
-                "n": len(texts),
-                "s1": Rate(len(s1), len(texts)).percent,
-                "ot3": Rate(len(ot3), len(texts)).percent,
-                "side": side,
+        later_sizes = {series: len(by_edition[later]) for series, (_, later) in SERIES.items()}
+        weights = [size / sum(later_sizes.values()) for size in later_sizes.values()]
+
+        filters = {}
+        for published in self.study.filters:
+            scan = self.study.scan(published)
+            flags = {e: scan.flagged(by_edition[e]) for e in editions}
+            indicator = {
+                e: [1 if i in flags[e] else 0 for i in range(len(by_edition[e]))] for e in editions
             }
-            for (competition, side), texts, s1, ot3 in zip(
-                sides.items(), groups, s1_flags, ot3_flags, strict=True
-            )
+
+            filters[published.name] = {
+                "editions": {
+                    e: {
+                        "n": len(indicator[e]),
+                        "pct": Rate(sum(indicator[e]), len(indicator[e])).percent,
+                    }
+                    for e in editions
+                },
+                "series": {
+                    series: matched_comparison(
+                        [pooled(indicator, earlier)], [indicator[later]], [1.0]
+                    )
+                    for series, (earlier, later) in SERIES.items()
+                },
+                "pooled": matched_comparison(
+                    [pooled(indicator, earlier) for earlier, _ in SERIES.values()],
+                    [indicator[later] for _, later in SERIES.values()],
+                    weights,
+                ),
+            }
+
+        return {
+            "series": {
+                series: {"earlier": list(earlier), "later": later}
+                for series, (earlier, later) in SERIES.items()
+            },
+            "weights": dict(zip(SERIES, weights, strict=True)),
+            "filters": filters,
         }
 
     def report(self, result):
-        lines = [f"{'competition':16s} {'items':>5s} {'s1':>7s} {'ot3':>7s}"]
-        for competition, row in result.items():
-            lines.append(
-                f"{competition:16s} {row['n']:5d} {row['s1']:6.1f}% {row['ot3']:6.1f}%"
-                f"  ({row['side']})"
-            )
+        header = f"{'filter':28s} {'series':9s} {'earlier':>8s} {'2026':>7s}"
+        lines = [f"{header} {'excess (pp), 95% CI':>24s}"]
+        for name, row in result["filters"].items():
+            comparisons = {**row["series"], "pooled": row["pooled"]}
+            for series, c in comparisons.items():
+                low, high = c["excess_pp"]["ci"]
+                lines.append(
+                    f"{name:28s} {series:9s} {c['earlier_pct']:7.1f}% {c['later_pct']:6.1f}% "
+                    f"{c['excess_pp']['value']:+8.1f} [{low:+.1f}, {high:+.1f}]"
+                )
         return lines

@@ -67,3 +67,49 @@ def bootstrap_rate(flagged: set[int], total: int) -> dict[str, float | list[floa
     draws = [100 * sum(rng.choices(indicator, k=total)) / total for _ in range(RESAMPLES)]
     low, high = central_interval(draws)
     return {"pct": Rate(len(flagged), total).percent, "ci": [low, high]}
+
+
+def weighted_rate(cells: Sequence[Sequence[int]], weights: Sequence[float]) -> float:
+    """The flag rate of several groups of items, combined with fixed weights."""
+    return sum(w * sum(cell) / len(cell) for cell, w in zip(cells, weights, strict=True))
+
+
+def matched_comparison(
+    earlier: Sequence[Sequence[int]],
+    later: Sequence[Sequence[int]],
+    weights: Sequence[float],
+) -> dict:
+    """Earlier editions of competitions against the editions that postdate the corpus.
+
+    Each argument holds one flag indicator per item, one list per competition
+    series, and `weights` gives each series' share of the later editions. Both
+    sides are weighted the same way, so the comparison holds the mix of
+    competitions fixed. The excess is the earlier rate minus the later one, in
+    percentage points; the share is the later rate over the earlier one, an
+    estimate of how much of the earlier editions' flagging the later editions'
+    noise accounts for. Intervals come from resampling items within each series.
+    """
+    rng = random.Random(SEED)
+    excess, shares = [], []
+    for _ in range(RESAMPLES):
+        earlier_draw = weighted_rate([rng.choices(c, k=len(c)) for c in earlier], weights)
+        later_draw = weighted_rate([rng.choices(c, k=len(c)) for c in later], weights)
+        excess.append(100 * (earlier_draw - later_draw))
+        if earlier_draw:
+            shares.append(later_draw / earlier_draw)
+
+    earlier_rate, later_rate = weighted_rate(earlier, weights), weighted_rate(later, weights)
+    return {
+        "earlier_pct": 100 * earlier_rate,
+        "later_pct": 100 * later_rate,
+        "excess_pp": {
+            "value": 100 * (earlier_rate - later_rate),
+            "ci": list(central_interval(excess)),
+        },
+        "share": {
+            "value": later_rate / earlier_rate if earlier_rate else None,
+            "ci": list(central_interval(shares)) if shares else None,
+            # Resamples with no earlier flag at all have no defined share.
+            "undefined_resamples": RESAMPLES - len(shares),
+        },
+    }

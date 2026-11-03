@@ -5,6 +5,7 @@ from contamination_audit.experiments.rates import (
     bootstrap_rate,
     central_interval,
     false_discovery_share,
+    matched_comparison,
 )
 
 
@@ -37,3 +38,17 @@ def test_bootstrap_is_seeded_and_brackets_the_rate():
 
 def test_bootstrap_of_nothing_flagged_is_a_point():
     assert bootstrap_rate(set(), 280) == {"pct": 0.0, "ci": [0.0, 0.0]}
+
+
+def test_matched_comparison_of_identical_groups_shows_no_excess():
+    cells = [[1, 0, 0, 1], [0, 1]]
+    result = matched_comparison(cells, cells, [0.5, 0.5])
+    assert result["excess_pp"]["value"] == 0
+    assert result["share"]["value"] == 1
+
+
+def test_matched_comparison_weights_series_by_the_later_editions():
+    earlier, later = [[1, 1], [0, 0]], [[1, 0], [0, 0]]
+    result = matched_comparison(earlier, later, [0.25, 0.75])
+    assert result["earlier_pct"] == 25.0
+    assert result["later_pct"] == 12.5
