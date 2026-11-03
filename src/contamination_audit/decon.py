@@ -14,14 +14,17 @@ and pass the binary at target/release/decon to `contamination-audit decon`.
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import re
+import shutil
 import subprocess
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import ClassVar
 
-from .data import DOLCI, BenchmarkItem, TrainingDocument
+from .data import DOLCI, NEMOTRON, TULU, BenchmarkItem, TrainingCorpus, TrainingDocument
 from .experiments.base import Experiment, Study
 from .experiments.scaling import CORPUS_SIZES
 from .jsonio import write_jsonl
@@ -32,13 +35,27 @@ SCORE_THRESHOLDS = (0.8, 0.6, 0.4, 0.2)  # 0.8 is decon's default
 
 
 @dataclass(frozen=True)
+class DeconFindings:
+    documents: int  # training documents decon reports as contaminated
+    items: list[int]  # positions, in the eval file, of the items they contaminate
+
+    def as_json(self) -> dict:
+        return {"documents": self.documents, "items": self.items}
+
+
+@dataclass(frozen=True)
 class DeconBinary:
     path: Path
 
-    def contaminated_documents(
-        self, training: Path, evals: Path, report: Path, threshold: float | None = None
-    ) -> int:
-        """How many training documents decon reports as contaminated."""
+    def detect(
+        self,
+        training: Path,
+        evals: Path,
+        report: Path,
+        threshold: float | None = None,
+        index_answers: bool = True,
+    ) -> DeconFindings:
+        """What decon reports as contaminated, at its defaults unless told otherwise."""
         command = [
             str(self.path), "detect",
             "--training-dir", str(training),
@@ -48,6 +65,10 @@ class DeconBinary:
         ]  # fmt: skip
         if threshold is not None:
             command += ["--contamination-score-threshold", str(threshold)]
+        if not index_answers:
+            command += ["--index-answers", "false"]
+        # A report left by an earlier run would be read as this run's.
+        shutil.rmtree(report, ignore_errors=True)
 
         # decon draws box characters, which Windows' default codec cannot decode.
         finished = subprocess.run(
@@ -61,7 +82,15 @@ class DeconBinary:
         reported = re.search(r"Contaminated documents\s*│?\s*([\d,]+)", finished.stdout)
         if not reported:
             raise RuntimeError(f"decon's report did not parse:\n{finished.stdout[-800:]}")
-        return int(reported.group(1).replace(",", ""))
+        # The report holds one line per contaminated (document, item) pair, above
+        # the threshold only; eval_instance_index is the item's line in the eval file.
+        items = {
+            json.loads(line)["eval_instance_index"]
+            for path in sorted(report.rglob("*.jsonl"))
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        }
+        return DeconFindings(int(reported.group(1).replace(",", "")), sorted(items))
 
 
 def write_training_set(documents: Iterable[TrainingDocument], directory: Path) -> int:
@@ -91,58 +120,115 @@ def write_eval_set(items: Iterable[BenchmarkItem], group: str, directory: Path) 
 
 
 class DeconRun(Experiment):
-    """decon at its default setting, a sweep of its score threshold, and optionally
-    the corpus sizes of the scaling experiment."""
+    """decon at its default setting on one corpus, writing results/paper/<name>.json."""
 
-    name = "decon"
-    title = "Ai2 decon on the main corpus"
+    corpus: ClassVar[TrainingCorpus]
 
     def __init__(self, study: Study, binary: Path, scaling: bool = False) -> None:
         super().__init__(study)
         self.decon = DeconBinary(binary)
         self.scaling = scaling
-        self.work = study.paths.work / "decon"
+        self.work = study.paths.work / self.name
+
+    def training_documents(self) -> list[TrainingDocument]:
+        return self.study.documents(self.corpus)
 
     def run(self):
-        split = self.study.split(DOLCI)
+        split = self.study.split(self.corpus)
         training = self.work / "training"
         result = {
-            "corpus_rows": write_training_set(self.study.documents(DOLCI), training),
+            "corpus_rows": write_training_set(self.training_documents(), training),
             "n_measure": write_eval_set(split.measurement, "measure", self.work / "evals_measure"),
             "n_control": write_eval_set(split.control, "control", self.work / "evals_control"),
         }
-
+        # Flagged items under the same keys as flag_counts uses for every other filter.
+        result["documents"] = {}
         for group in ("measure", "control"):
-            result[group] = self.decon.contaminated_documents(
+            findings = self.decon.detect(
                 training, self.work / f"evals_{group}", self.work / f"report_{group}"
             )
-
-        result["threshold_sweep"] = {
-            threshold: self.decon.contaminated_documents(
-                training, self.work / "evals_measure", self.work / f"report_t{threshold}", threshold
-            )
-            for threshold in SCORE_THRESHOLDS
-        }
-
-        if self.scaling:
-            # decon is not a rule in this package, so the claim that it stays at
-            # zero across corpus sizes needs its own run at each size.
-            result["scaling"] = {}
-            for size in CORPUS_SIZES:
-                sized = self.work / "training_scaling"
-                write_training_set(self.study.documents(DOLCI, size), sized)
-                result["scaling"][size] = self.decon.contaminated_documents(
-                    sized, self.work / "evals_measure", self.work / f"report_size{size}"
-                )
+            result[group] = findings.items
+            result["documents"][group] = findings.documents
         return result
 
     def report(self, result):
         lines = [
-            f"measurement {result['measure']}/{result['n_measure']}, "
-            f"control {result['control']}/{result['n_control']} contaminated"
+            f"measurement {len(result['measure'])}/{result['n_measure']} items, "
+            f"control {len(result['control'])}/{result['n_control']} items flagged; "
+            f"{result['documents']['measure']} and {result['documents']['control']} "
+            "contaminated documents"
         ]
-        for threshold, hits in result["threshold_sweep"].items():
-            lines.append(f"score threshold {threshold}: {hits} contaminated documents")
-        for size, hits in result.get("scaling", {}).items():
-            lines.append(f"{size:>9,d} documents: {hits} contaminated")
+        for label in ("threshold_sweep", "without_answers", "scaling"):
+            for setting, found in result.get(label, {}).items():
+                lines.append(
+                    f"{label} {setting}: {len(found['items'])} items, "
+                    f"{found['documents']} documents"
+                )
         return lines
+
+
+class DolciDecon(DeconRun):
+    """On all of Dolci, with a sweep of decon's score threshold and, optionally,
+    every corpus size of the scaling experiment."""
+
+    name = "decon"
+    title = "Ai2 decon on all of Dolci"
+    corpus = DOLCI
+
+    def training_documents(self):
+        return self.study.full_documents(DOLCI)
+
+    def run(self):
+        result = super().run()
+        training = self.work / "training"
+        result["threshold_sweep"] = {
+            threshold: self.decon.detect(
+                training, self.work / "evals_measure", self.work / f"report_t{threshold}", threshold
+            ).as_json()
+            for threshold in SCORE_THRESHOLDS
+        }
+        # Our eval files carry the benchmark answer and the training documents do
+        # not, so a question matched alone is scored on decon's question-and-answer
+        # weights, where the question term counts 0.75: below the 0.8 default even
+        # for a verbatim copy. Without indexed answers that ceiling is gone.
+        result["without_answers"] = {
+            group: self.decon.detect(
+                training,
+                self.work / f"evals_{group}",
+                self.work / f"report_{group}_without_answers",
+                index_answers=False,
+            ).as_json()
+            for group in ("measure", "control")
+        }
+        if self.scaling:
+            # decon is not a rule in this package, so the claim that it stays at
+            # zero across corpus sizes needs its own run at each size.
+            documents = self.training_documents()
+            result["scaling"] = {}
+            for size in CORPUS_SIZES:
+                size = size or len(documents)
+                sized = self.work / "training_scaling"
+                write_training_set(documents[:size], sized)
+                result["scaling"][size] = self.decon.detect(
+                    sized, self.work / "evals_measure", self.work / f"report_size{size}"
+                ).as_json()
+        return result
+
+
+class TuluDecon(DeconRun):
+    name = "decon_tulu"
+    title = "Ai2 decon on the Tulu 3 math SFT data (100,000 documents)"
+    corpus = TULU
+
+
+class NemotronDecon(DeconRun):
+    name = "decon_nemotron"
+    title = "Ai2 decon on Nemotron-SFT-Math-v4 (100,000 documents)"
+    corpus = NEMOTRON
+
+
+DECON_RUNS: dict[str, type[DeconRun]] = {
+    "dolci": DolciDecon,
+    "tulu": TuluDecon,
+    "nemotron": NemotronDecon,
+}
