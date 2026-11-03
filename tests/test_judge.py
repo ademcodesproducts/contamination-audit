@@ -2,11 +2,13 @@
 
 import json
 import shutil
+from collections import Counter
 
 import pytest
 
 from contamination_audit.errors import IntegrityError
 from contamination_audit.judge import CandidatePairBuilder, JudgeRecord
+from contamination_audit.judge.annotation import cohen_kappa, draw_sample
 
 from .conftest import REPO
 
@@ -76,3 +78,14 @@ def test_identical_text_pairs_are_merged_keeping_every_membership():
 def test_unflagged_items_contribute_no_pairs():
     hit = {"training": {"train_id": "t1", "problem": "text"}, "ngram": "x"}
     assert CandidatePairBuilder([match("control", 0, "q", [hit], flagged=False)]).build() == []
+
+
+def test_kappa_is_one_for_perfect_agreement_and_zero_at_chance():
+    assert cohen_kappa(["a", "b", "a", "b"], ["a", "b", "a", "b"]) == 1.0
+    assert cohen_kappa(["a", "a", "b", "b"], ["a", "b", "a", "b"]) == 0.0
+
+
+def test_annotation_sample_is_balanced_across_model_labels():
+    sample = draw_sample(JudgeRecord(RECORD), size=90)
+    counts = Counter(entry["model_label"] for entry in sample)
+    assert set(counts.values()) == {30}
