@@ -169,7 +169,8 @@ class DeconRun(Experiment):
         for group, findings in result.get("without_answers", {}).items():
             lines.append(f"without answers, {group}: {found(findings)}")
         for size, findings in result.get("scaling", {}).items():
-            lines.append(f"{size:>9,d} documents: {found(findings)}")
+            # sizes are ints when just run, strings when read back from JSON
+            lines.append(f"{int(size):>9,d} documents: {found(findings)}")
         return lines
 
 

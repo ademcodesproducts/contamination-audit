@@ -118,17 +118,17 @@ LaTeX delimiters, cut to their first half, and inside a longer conversation.
 Half the controls, chosen within each kind of question, are planted and half
 stay clean, so recall and false positives come from the same items.
 
-A further form, the question restated by a language model, needs an OpenAI
-key and is not committed. With `OPENAI_API_KEY` set,
+A further form, the question restated by a language model, is committed in
+`data/benchmarks/planted_paraphrases.jsonl`, made with `gpt-6-astra`; each
+line records the model, the response id and the SHA-256 of the prompt. Both
+experiments add the form whenever that file exists, so they never call an API.
+A new run words them differently, so the committed file is what reproduces
+the paper. To make it again, which needs an OpenAI key in `OPENAI_API_KEY`,
 
 ```bash
 pip install -e ".[paraphrase]"
-contamination-audit paraphrase-controls --model <model>
-contamination-audit run planted rare_ngrams
+contamination-audit paraphrase-controls --model gpt-6-astra
 ```
-
-writes `data/benchmarks/planted_paraphrases.jsonl` and adds the form to both
-experiments.
 
 ## Data
 
