@@ -26,13 +26,8 @@ pip install -e ".[dev]"
 python -m spacy download en_core_web_lg
 ```
 
-Everything runs on CPU. Without downloading any corpus, you can already check
-what is committed here:
-
-```bash
-pytest                                  # behaviour of every filter and experiment
-contamination-audit judge-verify        # integrity of the LLM-judge record
-```
+Everything runs on CPU. Without downloading any corpus, `pytest` already checks
+the behaviour of every filter and experiment.
 
 To reproduce the results from scratch, download the training corpora and run
 every experiment:
@@ -75,7 +70,6 @@ Each experiment writes one file, `results/paper/<name>.json`.
 | Phrase-agreement filtering | `phrases` |
 | Filtering on rare n-grams, tuned and tested on separate items | `rare_ngrams` |
 | Corpus composition, and the sources the flags come from | `composition` |
-| LLM judge of candidate pairs | `results/llm_judge/` |
 
 `flag_counts`, `agreement`, `strata`, `matched`, `collateral`, `rare_ngrams`
 and the last point of `scaling` use all of Dolci. The parameter sweeps,
@@ -128,6 +122,7 @@ A further form, the question restated by a language model, needs an OpenAI
 key and is not committed. With `OPENAI_API_KEY` set,
 
 ```bash
+pip install -e ".[paraphrase]"
 contamination-audit paraphrase-controls --model <model>
 contamination-audit run planted rare_ngrams
 ```
@@ -185,27 +180,6 @@ Each corpus has its own temporal split. AIME 2026 is a control for Dolci, which
 it postdates, but a measurement item for Nemotron, which postdates it. The
 splits are defined in `src/contamination_audit/data/benchmarks.py`.
 
-## The LLM-judge record
-
-`results/llm_judge/` holds a completed run in which a language model labelled
-565 benchmark/training pairs that the filters matched. It is frozen: inputs,
-responses, and manifests recording the SHA-256 of each, of the prompt, and of
-`run_judge.py`, the script that made the calls, kept byte for byte as it ran.
-`contamination-audit judge-verify` recomputes every hash and summary.
-See [its README](results/llm_judge/README.md) for what the labels do and do
-not show.
-
-To check the judge against people, `judge-annotate` draws a sample of its
-pairs, balanced across its labels, and writes one blind sheet per annotator
-with the judge's codebook. Once both sheets are filled in, `judge-agreement`
-reports Cohen's kappa between the annotators and between each of them and the
-judge.
-
-```bash
-contamination-audit judge-annotate --output annotation --size 150
-contamination-audit judge-agreement annotation
-```
-
 ## Repository layout
 
 ```
@@ -213,13 +187,11 @@ src/contamination_audit/
     filters/        tokenizers, matching rules, and the published filters
     data/           benchmarks, corpora, their temporal splits, downloaders
     experiments/    one class per result in the paper
-    judge/          the LLM-judge record, and human annotation of it
     decon.py        running Ai2's decon binary
     paraphrase.py   LLM restatements of the control items
     cli.py          the contamination-audit command
 data/benchmarks/    measurement and control questions
 results/paper/      one JSON file per experiment
-results/llm_judge/  the frozen LLM-judge run
 tests/
 ```
 

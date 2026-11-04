@@ -19,17 +19,15 @@ venv/
 .DS_Store
 Thumbs.db
 
-# Secrets, such as the OpenAI key for new judge runs
+# Secrets, such as the OpenAI key for paraphrase-controls
 .env
 .env.*
 
-# Training corpora, about 1.5 GB, downloaded by `contamination-audit fetch`
+# Training corpora, about 1.8 GB, downloaded by `contamination-audit fetch`
 data/corpora/
 
-# Scratch: decon's working copies, and outputs of new judge runs, which
-# run_judge.py writes to results/judge/ by default
+# Scratch: cached filter scans and decon's working copies
 work/
-results/judge/
 
 # Reference papers kept for reading, not distributed
 Literature/

@@ -41,8 +41,3 @@ class ProjectPaths:
     def paper_results(self) -> Path:
         """One JSON file per experiment, holding the numbers the paper reports."""
         return self.results / "paper"
-
-    @property
-    def judge_record(self) -> Path:
-        """The frozen LLM-judge experiment: inputs, responses and manifests."""
-        return self.results / "llm_judge"

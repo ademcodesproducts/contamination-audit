@@ -1,8 +1,7 @@
 """Reading and writing JSON and JSON Lines.
 
-Files are always written with LF line endings, whatever the platform, because
-the judge record verifies its files against SHA-256 hashes and a CRLF rewrite
-would break them.
+Files are always written with LF line endings, whatever the platform, so that
+results regenerated on Windows match the committed bytes.
 """
 
 from __future__ import annotations

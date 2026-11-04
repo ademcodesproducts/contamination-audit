@@ -31,9 +31,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0.0", "ruff>=0.4.0"]
-# Only for results/llm_judge/run_judge.py, which makes paid API calls. Pinned to
-# the versions in results/llm_judge/run_manifest.json, which made the saved labels.
-judge = ["openai==3.29.0", "pydantic==2.14.1"]
+# Only for `contamination-audit paraphrase-controls`, which makes paid API calls.
+paraphrase = ["openai>=3.0.0"]
 
 [project.scripts]
 contamination-audit = "contamination_audit.cli:main"
@@ -48,8 +47,6 @@ pythonpath = ["src"]
 [tool.ruff]
 line-length = 100
 src = ["src", "tests"]
-# The frozen judge script is checked against a SHA-256 hash, so it is never reformatted.
-extend-exclude = ["results/llm_judge/run_judge.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]

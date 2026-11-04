@@ -4,7 +4,6 @@
     contamination-audit run                        every experiment, in paper order
     contamination-audit run scaling tuning         just these
     contamination-audit decon --binary PATH        run Ai2's decon
-    contamination-audit judge-verify               check the frozen LLM-judge record
 
 Run from the repository root, or pass --root.
 """
@@ -13,7 +12,6 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
-import json
 import logging
 import sys
 from pathlib import Path
@@ -70,21 +68,6 @@ def build_parser() -> argparse.ArgumentParser:
         "paraphrase-controls", help="restate the control items with an LLM (paid API calls)"
     )
     rewrite.add_argument("--model", required=True, help="OpenAI model to restate with")
-
-    pairs = commands.add_parser("judge-pairs", help="rebuild the LLM judge's input pairs")
-    pairs.add_argument(
-        "--output", type=Path, required=True, help="where to write the pairs (must not exist)"
-    )
-
-    annotate = commands.add_parser("judge-annotate", help="write blind sheets for human labels")
-    annotate.add_argument("--output", type=Path, required=True, help="directory (must not exist)")
-    annotate.add_argument("--size", type=int, default=150, help="pairs to sample")
-
-    agree = commands.add_parser("judge-agreement", help="kappa for completed human labels")
-    agree.add_argument("directory", type=Path, help="the directory judge-annotate wrote")
-
-    verify = commands.add_parser("judge-verify", help="verify the frozen LLM-judge record")
-    verify.add_argument("--output-dir", type=Path, help="also write the rebuilt summaries here")
     return parser
 
 
@@ -152,45 +135,6 @@ def decon(args, paths: ProjectPaths) -> int:
     return 0
 
 
-def judge_pairs(args, paths: ProjectPaths) -> int:
-    from .jsonio import read_json
-    from .judge import CandidatePairBuilder
-
-    # The pairs carry decon's verdict as a fixed negative, which is only true
-    # while the saved decon run found nothing.
-    decon = read_json(paths.paper_results / "decon.json")
-    if decon["measure"] or decon["control"]:
-        raise IntegrityError(
-            "the judge snapshot assumes decon flagged nothing, but decon.json disagrees"
-        )
-
-    matches = read_json(paths.judge_record / "candidate_matches.json")
-    pairs = CandidatePairBuilder(matches).build()
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    with open(args.output, "x", encoding="utf-8", newline="\n") as out:
-        for pair in pairs:
-            out.write(json.dumps(pair, ensure_ascii=False) + "\n")
-    print(f"wrote {len(pairs)} pairs to {args.output}")
-    return 0
-
-
-def judge_verify(args, paths: ProjectPaths) -> int:
-    from .judge import JudgeRecord
-
-    record = JudgeRecord(paths.judge_record)
-    record.verify()
-    summaries = record.summaries()
-    if args.output_dir:
-        args.output_dir.mkdir(parents=True, exist_ok=True)
-        for name, summary in summaries.items():
-            with open(args.output_dir / name, "x", encoding="utf-8", newline="\n") as out:
-                out.write(json.dumps(summary, indent=2) + "\n")
-    print(f"verified {len(record.labels)} judgments and {len(record.review_labels)} repeats")
-    print("labels:", json.dumps(summaries["summary.json"]["labels"]))
-    print("repeat agreement:", json.dumps(summaries["review_summary.json"]["random_sample"]))
-    return 0
-
-
 def paraphrase_controls(args, paths: ProjectPaths) -> int:
     from .data import BenchmarkLibrary
     from .experiments.planted import PARAPHRASES_FILE
@@ -202,32 +146,9 @@ def paraphrase_controls(args, paths: ProjectPaths) -> int:
     return 0
 
 
-def judge_annotate(args, paths: ProjectPaths) -> int:
-    from .judge import JudgeRecord
-    from .judge.annotation import write_sheets
-
-    if args.output.exists():
-        raise FileExistsError(f"{args.output} already exists")
-    write_sheets(JudgeRecord(paths.judge_record), args.output, args.size)
-    print(f"wrote annotator_a.csv, annotator_b.csv, codebook.md and key.csv to {args.output}")
-    print("give each annotator the codebook and their own sheet; keep key.csv from both")
-    return 0
-
-
-def judge_agreement(args, paths: ProjectPaths) -> int:
-    from .judge.annotation import agreement
-
-    print(json.dumps(agreement(args.directory), indent=2))
-    return 0
-
-
 COMMANDS = {
     "fetch": fetch,
     "run": run,
     "decon": decon,
     "paraphrase-controls": paraphrase_controls,
-    "judge-pairs": judge_pairs,
-    "judge-annotate": judge_annotate,
-    "judge-agreement": judge_agreement,
-    "judge-verify": judge_verify,
 }
