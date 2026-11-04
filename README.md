@@ -4,15 +4,19 @@ Code and data for *Decontaminated by Whose Standard? A Label-Free Evaluation of
 Decontamination Filters* ([arXiv](https://arxiv.org/abs/XXXX.XXXXX)).
 
 Open post-training datasets routinely report that they were decontaminated
-against public benchmarks. We reimplement five of the filters behind those
-claims and apply them to the same training documents and benchmark questions.
-They disagree widely: on 100,000 Dolci documents and 502 benchmark questions
-they flag anywhere from 0 to 141 items.
+against public benchmarks. We take the filters behind five of those claims,
+reimplementing four and running Ai2's decon as released, and apply them to the
+same training documents and benchmark questions. They disagree widely: on all
+2.25 million Dolci documents and 502 benchmark questions, the four
+reimplemented filters flag anywhere from 2 to 231 items.
 
 To tell which flags are wrong without annotating anything, we add benchmark
 questions published *after* each corpus was assembled. They cannot be in the
 corpus, so a filter that flags one is wrong by construction. The two filters
-that flag the most have false-positive rates of 12.9% and 11.1% on Dolci.
+that flag the most have false-positive rates of 20.0% and 22.9% on all of
+Dolci, and over half on competition problems. To measure what the filters
+catch, we plant some of those same questions into the corpus, in several
+forms, and count how many come back.
 
 ## Quick start
 
@@ -22,45 +26,61 @@ pip install -e ".[dev]"
 python -m spacy download en_core_web_lg
 ```
 
-Everything runs on CPU and needs no API key. Without downloading any corpus,
-you can already check what is committed here:
+Everything runs on CPU. Without downloading any corpus, you can already check
+what is committed here:
 
 ```bash
 pytest                                  # behaviour of every filter and experiment
 contamination-audit judge-verify        # integrity of the LLM-judge record
 ```
 
-To reproduce the results from scratch, download the training corpora (about
-1.5 GB) and run every experiment:
+To reproduce the results from scratch, download the training corpora and run
+every experiment:
 
 ```bash
 contamination-audit fetch dolci tulu nemotron
 contamination-audit run                 # writes results/paper/*.json
 ```
 
+All of Dolci is a 36 GB download, read one Parquet shard at a time, from which
+about 1.8 GB of questions is kept; Tülu 3 and Nemotron default to their first
+100,000 documents. A download that drops resumes where it stopped when run
+again.
+
 `contamination-audit run --list` shows the experiments, and
-`contamination-audit run scaling tuning` runs a subset. The whole set takes
-about an hour on a laptop, most of it in `scaling`, which tokenizes 390,000
-documents with the Qwen2 tokenizer.
+`contamination-audit run scaling tuning` runs a subset. The experiments on all
+of Dolci share one pass of each filter over the corpus, cached under
+`work/scans/`. Those passes take about an hour on a laptop, almost all of it in
+the OpenThoughts3 and Tülu 3 filters, and need about 6 GB of memory; the
+experiments that read them then take minutes.
 
 ## Where each result comes from
 
 Each experiment writes one file, `results/paper/<name>.json`.
 
-| In the paper | Experiment |
+| Result | Experiment |
 |---|---|
-| Longest span shared with the corpus (§4.1, Table 1) | `validation` |
-| Items flagged by each filter (Table 2) | `flag_counts`, plus `decon` |
-| Filter agreement and bootstrap intervals (§5.1, §5.2) | `agreement` |
-| False positives against corpus size (§6.1, Figure 3, Table 6) | `scaling` |
-| Replication on Tülu 3 and Nemotron (§6.2, Table 3) | `tulu`, `nemotron` |
-| The same competitions one year apart (§6.3, Table 4) | `matched` |
-| Phrases behind s1's false positives (Appendix D, Table 9) | `mechanism` |
-| Parameter sweeps (§7.2, Figure 4, Table 8) | `tuning` |
-| Phrase-agreement filtering (§7.3, Table 5) | `phrases` |
-| Control set by question type (Appendix E, Table 10) | `strata` |
-| LLM judge of candidate pairs (Appendix B, Table 7) | `results/llm_judge/` |
-| Corpus composition (Figure 1), and the sources the flags come from | `composition` |
+| Longest span each control shares with the corpus | `validation` |
+| When the papers behind the research controls first appeared | `control_dates` |
+| Items flagged by each filter on all of Dolci | `flag_counts`, plus `decon` |
+| Filter agreement and bootstrap intervals | `agreement` |
+| Flag rates by kind of question, on both sides of the split | `strata` |
+| Each competition against its own 2026 edition | `matched` |
+| Training documents each filter removes, and how many only for controls | `collateral` |
+| False positives against corpus size, up to all of Dolci | `scaling` |
+| Replication on Tülu 3 and Nemotron | `tulu`, `nemotron`, plus `decon_tulu`, `decon_nemotron` |
+| Recall on planted contamination | `planted` |
+| Phrases behind s1's false positives | `mechanism` |
+| Parameter sweeps | `tuning` |
+| Phrase-agreement filtering | `phrases` |
+| Filtering on rare n-grams, tuned and tested on separate items | `rare_ngrams` |
+| Corpus composition, and the sources the flags come from | `composition` |
+| LLM judge of candidate pairs | `results/llm_judge/` |
+
+`flag_counts`, `agreement`, `strata`, `matched`, `collateral`, `rare_ngrams`
+and the last point of `scaling` use all of Dolci. The parameter sweeps,
+`mechanism`, `phrases` and `validation` use its first 100,000 documents, as do
+the replications on the other two corpora.
 
 ## The filters
 
@@ -81,30 +101,80 @@ item's best score, so ours is an upper bound on the original.
 
 decon is a Rust binary and is run as one rather than reimplemented. Its first
 stage alone flags 199 of the 200 OlymMATH items where the full tool flags none.
+On Dolci the run also sweeps decon's score threshold, on the controls as well
+as the measurement items, and repeats the default without indexing answers. Our eval files give each benchmark item its answer
+and training questions have none, so a question matched on its own is scored
+with decon's question-and-answer weights, where the question counts 0.75 of
+the score, below the default threshold of 0.8 even for a verbatim copy.
 
 ```bash
-git clone https://github.com/allenai/decon && (cd decon && cargo build --release)
+git clone https://github.com/allenai/decon && cd decon
+git checkout 4cdcc5696ed047bf7d0d48b8d86a274f5a06c0a6 && cargo build --release && cd ..
 contamination-audit decon --binary decon/target/release/decon --scaling
+contamination-audit decon --binary decon/target/release/decon --corpus tulu
+contamination-audit decon --binary decon/target/release/decon --corpus nemotron
+contamination-audit run tulu nemotron   # adds decon to the replications
 ```
 
-Its committed result is `results/paper/decon.json`.
+## Planted contamination
+
+`planted` measures recall by adding control questions to the corpus as new
+training documents: verbatim, followed by the answer, retypeset with other
+LaTeX delimiters, cut to their first half, and inside a longer conversation.
+Half the controls, chosen within each kind of question, are planted and half
+stay clean, so recall and false positives come from the same items.
+
+A further form, the question restated by a language model, needs an OpenAI
+key and is not committed. With `OPENAI_API_KEY` set,
+
+```bash
+contamination-audit paraphrase-controls --model <model>
+contamination-audit run planted rare_ngrams
+```
+
+writes `data/benchmarks/planted_paraphrases.jsonl` and adds the form to both
+experiments.
 
 ## Data
 
-**Benchmarks** are small and committed under `data/benchmarks/`. The
-measurement set holds OlymMATH and ten MathArena competitions held before
-November 2025; the control set holds eight MathArena sets published from
-January 2026 on. `contamination-audit fetch benchmarks` downloads them again.
+**Benchmarks** are small and committed under `data/benchmarks/`.
+
+| File | Contents |
+|---|---|
+| `olymmath_en_{easy,hard}.jsonl` | OlymMATH, 200 items |
+| `matharena_measurement.jsonl` | ten MathArena competitions held before November 2025, 302 items |
+| `matharena_control.jsonl` | eight MathArena sets published from January 2026 on, 280 items |
+| `matharena_control_post_may2026.jsonl` | five sets from June 2026 on, the controls for Nemotron, 261 items |
+| `matharena_earlier_editions.jsonl` | AIME and HMMT February 2023 and USAMO 2024–25, 69 items |
+| `arxiv_first_posted.json` | when the paper behind each research-derived control first appeared |
+
+`contamination-audit fetch benchmarks arxiv-dates` downloads them again. Every
+MathArena set is pinned to the revision current on 2026-10-06, when the
+committed files were taken. Three of them, AIME 2026, HMMT February 2026 and
+CMIMC 2025, were corrected upstream on 2026-10-19; fetching their latest
+version would not reproduce the paper.
+
+A question published after a corpus can still come from a paper posted before
+it. Research-derived controls therefore count only when their source paper
+first appeared on arXiv after the corpus's release. This drops none of Dolci's
+or Tülu 3's controls and 20 of Nemotron's.
 
 **Training corpora** are downloaded into `data/corpora/`, keeping only the
 first user turn of each example, which is where a leaked benchmark question
 would appear and what the released filter code searches.
 
-| Corpus | Source | Released | Documents used |
-|---|---|---|---|
-| Dolci | `allenai/Dolci-Think-SFT-32B` | Nov 2025 | the first 100,000, and 390,000 for scaling |
-| Tülu 3 math | `allenai/tulu-3-sft-mixture`, math sources | Nov 2024 | the first 100,000 |
-| Nemotron | `nvidia/Nemotron-SFT-Math-v4` | May 2026 | the first 100,000 |
+| Corpus | Source | Revision | Released | Documents used |
+|---|---|---|---|---|
+| Dolci | `allenai/Dolci-Think-SFT-32B` | `7668c638` | Nov 2025 | all 2,253,676 |
+| Tülu 3 math | `allenai/tulu-3-sft-mixture`, math sources | `b14afda6` | Nov 2024 | the first 100,000 |
+| Nemotron | `nvidia/Nemotron-SFT-Math-v4` | `84d42ad0` | June 2026 | the first 100,000 |
+
+Dolci's revision is the March 2026 re-upload of the November 2025 release. It
+has the same examples in the same order with the same questions, and replaces
+one placeholder source label with one per original dataset. Eight of its
+2,253,684 examples have an empty first user turn and are skipped. Nemotron's
+revision rewrote the files of its first upload without changing any document
+read here. Its release date is the day its data first appeared on the Hub.
 
 Experiments always read a prefix of a corpus, never a sample, so a larger
 corpus contains every smaller one and download order matters. The first
@@ -125,6 +195,17 @@ responses, and manifests recording the SHA-256 of each, of the prompt, and of
 See [its README](results/llm_judge/README.md) for what the labels do and do
 not show.
 
+To check the judge against people, `judge-annotate` draws a sample of its
+pairs, balanced across its labels, and writes one blind sheet per annotator
+with the judge's codebook. Once both sheets are filled in, `judge-agreement`
+reports Cohen's kappa between the annotators and between each of them and the
+judge.
+
+```bash
+contamination-audit judge-annotate --output annotation --size 150
+contamination-audit judge-agreement annotation
+```
+
 ## Repository layout
 
 ```
@@ -132,8 +213,9 @@ src/contamination_audit/
     filters/        tokenizers, matching rules, and the published filters
     data/           benchmarks, corpora, their temporal splits, downloaders
     experiments/    one class per result in the paper
-    judge/          rebuilding and verifying the LLM-judge record
+    judge/          the LLM-judge record, and human annotation of it
     decon.py        running Ai2's decon binary
+    paraphrase.py   LLM restatements of the control items
     cli.py          the contamination-audit command
 data/benchmarks/    measurement and control questions
 results/paper/      one JSON file per experiment
@@ -143,11 +225,11 @@ tests/
 
 ## Reproducibility
 
-Every filter is deterministic, and bootstrap intervals use a fixed seed, so
-rerunning reproduces the committed results exactly. They were checked by
-regenerating every file into an empty directory and comparing bytes. The
-committed results were produced with Python 3.10, transformers 5.6, tokenizers
-0.22, spaCy 3.8 with `en_core_web_lg` 3.8.0, and rapidfuzz 3.14.
+Every filter is deterministic, and bootstrap intervals and samples use fixed
+seeds, so rerunning reproduces the committed results exactly. They were
+checked by regenerating every file into an empty directory and comparing
+bytes. The committed results were produced with Python 3.10, transformers 5.6,
+tokenizers 0.22, spaCy 3.8 with `en_core_web_lg` 3.8.0, and rapidfuzz 3.14.
 
 transformers, datasets and tokenizers all require `huggingface-hub` below 2.0.
 If an unrelated package has upgraded it, imports fail; reinstall it with

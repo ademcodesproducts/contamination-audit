@@ -1,0 +1,64 @@
+{
+ "Dolci-Think-SFT-32B": {
+  "released": "2025-11-20",
+  "arxiv_controls": 211,
+  "undated_research_controls": 0,
+  "first_posted_by_month": {
+   "2025-12": 1,
+   "2026-01": 23,
+   "2026-02": 3,
+   "2026-03": 82,
+   "2026-06": 102
+  },
+  "earliest": "2025-12-25",
+  "dropped_on_or_before_release": []
+ },
+ "tulu_math": {
+  "released": "2024-11-21",
+  "arxiv_controls": 211,
+  "undated_research_controls": 0,
+  "first_posted_by_month": {
+   "2025-12": 1,
+   "2026-01": 23,
+   "2026-02": 3,
+   "2026-03": 82,
+   "2026-06": 102
+  },
+  "earliest": "2025-12-25",
+  "dropped_on_or_before_release": []
+ },
+ "Nemotron-SFT-Math-v4": {
+  "released": "2026-06-02",
+  "arxiv_controls": 261,
+  "undated_research_controls": 0,
+  "first_posted_by_month": {
+   "2026-05": 4,
+   "2026-06": 144,
+   "2026-07": 6,
+   "2026-08": 107
+  },
+  "earliest": "2026-05-28",
+  "dropped_on_or_before_release": [
+   "arxivlean-0626_0000",
+   "arxivlean-0626_0001",
+   "arxivlean-0626_0002",
+   "arxivlean-0626_0003",
+   "arxivlean-0626_0004",
+   "arxivlean-0626_0005",
+   "arxivlean-0626_0006",
+   "arxivlean-0626_0007",
+   "arxivlean-0626_0008",
+   "arxivlean-0626_0010",
+   "arxivmath-0626_0000",
+   "arxivmath-0626_0001",
+   "arxivmath-0626_0002",
+   "arxivmath-0626_0003",
+   "arxivmath-0626_0004",
+   "brokenarxiv-0626_0000",
+   "brokenarxiv-0626_0001",
+   "brokenarxiv-0626_0002",
+   "brokenarxiv-0626_0003",
+   "brokenarxiv-0626_0004"
+  ]
+ }
+}

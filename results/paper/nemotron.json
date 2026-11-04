@@ -2,21 +2,21 @@
  "corpus": "Nemotron-SFT-Math-v4",
  "docs": 100000,
  "n_measure": 680,
- "n_control": 261,
+ "n_control": 241,
  "filters": {
   "s1-8gram-word": {
    "detect": 15.441176470588236,
-   "fp": 5.363984674329502,
+   "fp": 5.809128630705394,
    "n_detect": 105,
    "n_fp": 14,
-   "fd_share": 0.34738186462324394
+   "fd_share": 0.37621023513139695
   },
   "ot3-13gram-qwen-or-fuzz75": {
    "detect": 24.11764705882353,
-   "fp": 16.091954022988507,
+   "fp": 15.767634854771785,
    "n_detect": 164,
-   "n_fp": 42,
-   "fd_share": 0.6672273619287917
+   "n_fp": 38,
+   "fd_share": 0.6537799817832203
   },
   "ot114k-fuzz95": {
    "detect": 0.0,
@@ -31,6 +31,13 @@
    "n_detect": 1,
    "n_fp": 0,
    "fd_share": 0.0
+  },
+  "decon": {
+   "detect": 0.0,
+   "fp": 0.0,
+   "n_detect": 0,
+   "n_fp": 0,
+   "fd_share": null
   }
  }
 }

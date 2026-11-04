@@ -1,0 +1,29 @@
+{
+ "corpus_n": 2253676,
+ "filters": {
+  "s1-8gram-word": {
+   "measurement_documents": 19767,
+   "control_documents": 9742,
+   "control_only_documents": 3804,
+   "any_documents": 23571
+  },
+  "ot3-13gram-qwen-or-fuzz75": {
+   "measurement_documents": 21800,
+   "control_documents": 11938,
+   "control_only_documents": 3149,
+   "any_documents": 24949
+  },
+  "ot114k-fuzz95": {
+   "measurement_documents": 5,
+   "control_documents": 0,
+   "control_only_documents": 0,
+   "any_documents": 5
+  },
+  "tulu3-8gram-50pct": {
+   "measurement_documents": 366,
+   "control_documents": 1,
+   "control_only_documents": 1,
+   "any_documents": 367
+  }
+ }
+}

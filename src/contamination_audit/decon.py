@@ -31,7 +31,8 @@ from .jsonio import write_jsonl
 
 log = logging.getLogger(__name__)
 
-SCORE_THRESHOLDS = (0.8, 0.6, 0.4, 0.2)  # 0.8 is decon's default
+DEFAULT_THRESHOLD = 0.8
+SCORE_THRESHOLDS = (DEFAULT_THRESHOLD, 0.6, 0.4, 0.2)
 
 
 @dataclass(frozen=True)
@@ -158,12 +159,17 @@ class DeconRun(Experiment):
             f"{result['documents']['measure']} and {result['documents']['control']} "
             "contaminated documents"
         ]
-        for label in ("threshold_sweep", "without_answers", "scaling"):
-            for setting, found in result.get(label, {}).items():
-                lines.append(
-                    f"{label} {setting}: {len(found['items'])} items, "
-                    f"{found['documents']} documents"
-                )
+
+        def found(findings):
+            return f"{len(findings['items'])} items, {findings['documents']} documents"
+
+        for group, by_threshold in result.get("threshold_sweep", {}).items():
+            for threshold, findings in by_threshold.items():
+                lines.append(f"threshold {threshold}, {group}: {found(findings)}")
+        for group, findings in result.get("without_answers", {}).items():
+            lines.append(f"without answers, {group}: {found(findings)}")
+        for size, findings in result.get("scaling", {}).items():
+            lines.append(f"{size:>9,d} documents: {found(findings)}")
         return lines
 
 
@@ -181,11 +187,23 @@ class DolciDecon(DeconRun):
     def run(self):
         result = super().run()
         training = self.work / "training"
+        # Swept on the controls too: what a lower threshold adds is only
+        # contamination if it adds more measurement items than controls.
         result["threshold_sweep"] = {
-            threshold: self.decon.detect(
-                training, self.work / "evals_measure", self.work / f"report_t{threshold}", threshold
-            ).as_json()
-            for threshold in SCORE_THRESHOLDS
+            group: {
+                threshold: (
+                    {"documents": result["documents"][group], "items": result[group]}
+                    if threshold == DEFAULT_THRESHOLD
+                    else self.decon.detect(
+                        training,
+                        self.work / f"evals_{group}",
+                        self.work / f"report_{group}_t{threshold}",
+                        threshold,
+                    ).as_json()
+                )
+                for threshold in SCORE_THRESHOLDS
+            }
+            for group in ("measure", "control")
         }
         # Our eval files carry the benchmark answer and the training documents do
         # not, so a question matched alone is scored on decon's question-and-answer
@@ -206,7 +224,11 @@ class DolciDecon(DeconRun):
             documents = self.training_documents()
             result["scaling"] = {}
             for size in CORPUS_SIZES:
-                size = size or len(documents)
+                if size is None:  # the whole corpus, already run above
+                    result["scaling"][len(documents)] = result["threshold_sweep"]["measure"][
+                        DEFAULT_THRESHOLD
+                    ]
+                    continue
                 sized = self.work / "training_scaling"
                 write_training_set(documents[:size], sized)
                 result["scaling"][size] = self.decon.detect(

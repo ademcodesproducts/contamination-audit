@@ -1,0 +1,11 @@
+{
+ "corpus_rows": 100000,
+ "n_measure": 680,
+ "n_control": 241,
+ "documents": {
+  "measure": 0,
+  "control": 0
+ },
+ "measure": [],
+ "control": []
+}
