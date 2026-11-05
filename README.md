@@ -179,8 +179,8 @@ or Tülu 3's controls and 20 of Nemotron's.
 A contest can also reuse an old problem. Problem 1 of the 2026 AIME I appears
 almost word for word in Tülu 3's NuminaMath component, in data uploaded in
 November 2024, though not in Dolci. It stays among Tülu 3's controls and is its
-one whole-string flag. OlymMATH was published in 2025 but compiled from older
-contests, so it is not a control for Tülu 3 at all.
+one whole-string flag. OlymMATH was published in 2025 but sourced from printed
+publications, so it is not a control for Tülu 3 at all.
 
 **Training corpora** are downloaded into `data/corpora/`, keeping only the
 first user turn of each example, which is where a leaked benchmark question

@@ -197,8 +197,8 @@ class BenchmarkLibrary:
     def tulu_split(self) -> TemporalSplit:
         """Competitions from 2025 on postdate Tulu 3, so they join the control.
 
-        OlymMATH does not. It was published in 2025 but compiled from older
-        contests, and at least one of its problems appears in Tulu 3's NuminaMath
+        OlymMATH does not. It was published in 2025 but sourced from printed
+        publications, and at least one of its problems appears in Tulu 3's NuminaMath
         source, so its date says nothing about when its problems first existed.
         """
         dolci = self.dolci_split()
