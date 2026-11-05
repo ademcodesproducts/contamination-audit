@@ -250,8 +250,62 @@ class NemotronDecon(DeconRun):
     corpus = NEMOTRON
 
 
+class PlantedDecon(DeconRun):
+    """decon's recall on the control items planted into Dolci.
+
+    The same documents as the planted experiment, so the recall is comparable
+    with the other filters'. Only the planted documents are searched: recall
+    counts an item when one of its own planted copies is flagged, which the
+    rest of the corpus cannot change.
+    """
+
+    name = "decon_planted"
+    title = "Ai2 decon's recall on control items planted into Dolci"
+    corpus = DOLCI
+
+    SETTINGS: ClassVar[dict[str, dict]] = {
+        "default": {},
+        **{f"threshold {t}": {"threshold": t} for t in SCORE_THRESHOLDS[1:]},
+        "without answers": {"index_answers": False},
+    }
+
+    def run(self):
+        from .experiments.planted import planted_documents
+        from .experiments.rates import bootstrap_rate
+
+        control, planted, forms = planted_documents(self.study)
+        evals = self.work / "evals_control"
+        write_eval_set(control, "control", evals)
+        result = {"planted": len(planted), "forms": {}}
+        for form, documents in forms.items():
+            training = self.work / form / "training"
+            write_training_set(
+                (
+                    TrainingDocument(f"planted-{i}", text, "planted")
+                    for i, text in zip(planted, documents, strict=True)
+                ),
+                training,
+            )
+            result["forms"][form] = {}
+            for setting, options in self.SETTINGS.items():
+                findings = self.decon.detect(
+                    training, evals, self.work / form / setting.replace(" ", "_"), **options
+                )
+                within = {planted.index(i) for i in findings.items if i in planted}
+                result["forms"][form][setting] = bootstrap_rate(within, len(planted))
+        return result
+
+    def report(self, result):
+        lines = [f"{result['planted']} items planted; recall by form and setting"]
+        for form, settings in result["forms"].items():
+            cells = [f"{s} {r['pct']:.0f}%" for s, r in settings.items()]
+            lines.append(f"{form:16s} " + "  ".join(cells))
+        return lines
+
+
 DECON_RUNS: dict[str, type[DeconRun]] = {
     "dolci": DolciDecon,
     "tulu": TuluDecon,
     "nemotron": NemotronDecon,
+    "planted": PlantedDecon,
 }

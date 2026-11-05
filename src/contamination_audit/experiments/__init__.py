@@ -9,6 +9,7 @@ from .agreement import FilterAgreement
 from .base import Experiment, Study
 from .collateral import CollateralLoss
 from .composition import Composition
+from .embedding import EmbeddingFilter
 from .flag_counts import FlagCounts
 from .matched import MatchedCompetitions
 from .mechanism import Mechanism
@@ -39,6 +40,7 @@ EXPERIMENTS: dict[str, type[Experiment]] = {
         PhraseAgreementSweep,
         PlantedRecall,
         RareNgramEvaluation,
+        EmbeddingFilter,
         Strata,
         Composition,
     )

@@ -58,7 +58,10 @@ def build_parser() -> argparse.ArgumentParser:
     decon = commands.add_parser("decon", help="run Ai2's decon binary over a training corpus")
     decon.add_argument("--binary", type=Path, required=True, help="path to decon's release build")
     decon.add_argument(
-        "--corpus", choices=("dolci", "tulu", "nemotron"), default="dolci", help="which corpus"
+        "--corpus",
+        choices=("dolci", "tulu", "nemotron", "planted"),
+        default="dolci",
+        help="which corpus, or 'planted' for recall on the planted control items",
     )
     decon.add_argument(
         "--scaling", action="store_true", help="Dolci only: also run at every scaling size"

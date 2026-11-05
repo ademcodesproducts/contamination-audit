@@ -84,6 +84,27 @@ def load_paraphrases(directory: Path) -> dict[str, str]:
     return {row["id"]: row["paraphrase"] for row in read_jsonl(path)}
 
 
+def planted_documents(study) -> tuple[list[BenchmarkItem], list[int], dict[str, list[str]]]:
+    """The controls, which of them are planted, and the planted documents in each form.
+
+    Shared with decon's planted run, so both plant exactly the same documents.
+    """
+    control = list(study.split(DOLCI).control)
+    planted = PlantedRecall._choose(control)
+    corpus = [q for q in study.questions(DOLCI) if q.strip()]
+    fillers = random.Random(SEED + 1).sample(corpus, len(planted))
+
+    forms = dict(FORMS)
+    paraphrases = load_paraphrases(study.paths.benchmarks)
+    if paraphrases:
+        forms["paraphrase"] = lambda item, _: paraphrases[item.id]
+    documents = {
+        name: [form(control[i], filler) for i, filler in zip(planted, fillers, strict=True)]
+        for name, form in forms.items()
+    }
+    return control, planted, documents
+
+
 def swept_rules() -> dict[str, MatchingRule]:
     """Every setting the tuning and phrase experiments sweep, by label."""
     rules: dict[str, MatchingRule] = {}
@@ -102,23 +123,13 @@ class PlantedRecall(Experiment):
     title = "Recall on control items planted into the corpus"
 
     def run(self):
-        control = list(self.study.split(DOLCI).control)
-        planted = self._choose(control)
+        control, planted, forms = planted_documents(self.study)
         held_out = [i for i in range(len(control)) if i not in planted]
-        fillers = self._fillers(len(planted))
-
-        forms = dict(FORMS)
-        paraphrases = load_paraphrases(self.study.paths.benchmarks)
-        if paraphrases:
-            forms["paraphrase"] = lambda item, _: paraphrases[item.id]
 
         rules = {f.name: f.rule for f in self.study.filters} | swept_rules()
         texts = [item.problem for item in control]
         results = {}
-        for form_name, form in forms.items():
-            documents = [
-                form(control[i], filler) for i, filler in zip(planted, fillers, strict=True)
-            ]
+        for form_name, documents in forms.items():
             results[form_name] = {}
             for label, rule in rules.items():
                 found = {i for i in rule.flag(documents, texts) if i in planted}
@@ -143,11 +154,6 @@ class PlantedRecall(Experiment):
             members = [i for i, item in enumerate(control) if kind_of(item) == kind]
             chosen += rng.sample(members, len(members) // 2)
         return sorted(chosen)
-
-    def _fillers(self, count: int) -> list[str]:
-        """Unrelated training questions to surround the planted ones."""
-        corpus = [q for q in self.study.questions(DOLCI) if q.strip()]
-        return random.Random(SEED + 1).sample(corpus, count)
 
     @staticmethod
     def _by_kind(control, planted, found) -> dict:

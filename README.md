@@ -26,8 +26,9 @@ pip install -e ".[dev]"
 python -m spacy download en_core_web_lg
 ```
 
-Everything runs on CPU. Without downloading any corpus, `pytest` already checks
-the behaviour of every filter and experiment.
+Everything except the `embedding` experiment runs comfortably on CPU, and that
+one needs `pip install -e ".[embedding]"`. Without downloading any corpus,
+`pytest` already checks the behaviour of every filter and experiment.
 
 To reproduce the results from scratch, download the training corpora and run
 every experiment:
@@ -64,11 +65,12 @@ Each experiment writes one file, `results/paper/<name>.json`.
 | Training documents each filter removes, and how many only for controls | `collateral` |
 | False positives against corpus size, up to all of Dolci | `scaling` |
 | Replication on Tülu 3 and Nemotron | `tulu`, `nemotron`, plus `decon_tulu`, `decon_nemotron` |
-| Recall on planted contamination | `planted` |
+| Recall on planted contamination | `planted`, plus `decon_planted` |
 | Phrases behind s1's false positives | `mechanism` |
 | Parameter sweeps | `tuning` |
 | Phrase-agreement filtering | `phrases` |
 | Filtering on rare n-grams, tuned and tested on separate items | `rare_ngrams` |
+| Embedding retrieval, swept over a cosine threshold, on all of Dolci | `embedding` |
 | Corpus composition, and the sources the flags come from | `composition` |
 
 `flag_counts`, `agreement`, `strata`, `matched`, `collateral`, `rare_ngrams`
@@ -107,6 +109,7 @@ git checkout 4cdcc5696ed047bf7d0d48b8d86a274f5a06c0a6 && cargo build --release &
 contamination-audit decon --binary decon/target/release/decon --scaling
 contamination-audit decon --binary decon/target/release/decon --corpus tulu
 contamination-audit decon --binary decon/target/release/decon --corpus nemotron
+contamination-audit decon --binary decon/target/release/decon --corpus planted   # recall
 contamination-audit run tulu nemotron   # adds decon to the replications
 ```
 
@@ -129,6 +132,22 @@ the paper. To make it again, which needs an OpenAI key in `OPENAI_API_KEY`,
 pip install -e ".[paraphrase]"
 contamination-audit paraphrase-controls --model gpt-6-astra
 ```
+
+## The embedding filter
+
+`embedding` reproduces the retrieval stage of the
+[LLM Decontaminator](https://github.com/lm-sys/llm-decontaminator): its default
+encoder, `multi-qa-MiniLM-L6-cos-v1`, pinned to a revision, with one document
+retrieved per item. A threshold on the cosine replaces its LLM verdict, and is
+swept rather than chosen, so this is not the complete tool. Each threshold gets
+the same tests as the string filters, and `nearest` in the result records every
+item's closest document.
+
+Encoding all of Dolci takes about 1.5 hours on a laptop RTX 4060, and we estimate
+about 14 hours on CPU. Finished shards are saved under
+`work/embeddings/`, so a run that stops picks up where it left off when run
+again. On our machine, long CUDA runs hit repeated GPU timeouts, blue screens
+under driver 561.00 and recoverable errors under 621.14, so save your work first.
 
 ## Data
 
@@ -184,7 +203,7 @@ splits are defined in `src/contamination_audit/data/benchmarks.py`.
 
 ```
 src/contamination_audit/
-    filters/        tokenizers, matching rules, and the published filters
+    filters/        tokenizers, matching rules, the published filters, embedding retrieval
     data/           benchmarks, corpora, their temporal splits, downloaders
     experiments/    one class per result in the paper
     decon.py        running Ai2's decon binary
@@ -202,6 +221,12 @@ seeds, so rerunning reproduces the committed results exactly. They were
 checked by regenerating every file into an empty directory and comparing
 bytes. The committed results were produced with Python 3.10, transformers 5.6,
 tokenizers 0.22, spaCy 3.8 with `en_core_web_lg` 3.8.0, and rapidfuzz 3.14.
+
+Three results are outside that check. `decon*.json` come from a separate binary,
+and `embedding.json` depends on floating-point arithmetic that varies with
+hardware, so its cosines can differ slightly on another machine and an item very
+close to a threshold could change sides. It was made with torch 2.11 and
+sentence-transformers 5.4 on CUDA 12.6.
 
 transformers, datasets and tokenizers all require `huggingface-hub` below 2.0.
 If an unrelated package has upgraded it, imports fail; reinstall it with

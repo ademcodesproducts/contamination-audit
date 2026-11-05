@@ -33,6 +33,8 @@ dependencies = [
 dev = ["pytest>=8.0.0", "ruff>=0.4.0"]
 # Only for `contamination-audit paraphrase-controls`, which makes paid API calls.
 paraphrase = ["openai>=3.0.0"]
+# Only for the `embedding` experiment; a GPU makes it minutes instead of hours.
+embedding = ["sentence-transformers>=3.0.0", "torch>=2.0.0"]
 
 [project.scripts]
 contamination-audit = "contamination_audit.cli:main"

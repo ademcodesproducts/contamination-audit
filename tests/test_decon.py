@@ -4,7 +4,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from contamination_audit.decon import DeconBinary, DolciDecon
+from contamination_audit.decon import DeconBinary, DolciDecon, PlantedDecon
 from contamination_audit.experiments.scaling import CORPUS_SIZES
 
 SUMMARY = "│ Contaminated documents                  2 │\n"
@@ -61,3 +61,21 @@ def test_the_threshold_sweep_covers_the_controls_without_rerunning_the_default(
     assert len(seen) == 2 + 6 + 2 + len(CORPUS_SIZES) - 1
     whole = result["corpus_rows"]
     assert result["scaling"][whole] == result["threshold_sweep"]["measure"][0.8]
+
+
+def test_planted_recall_counts_only_planted_items(tiny_study, monkeypatch):
+    from contamination_audit.experiments.planted import planted_documents
+
+    control, planted, forms = planted_documents(tiny_study)
+    clean = next(i for i in range(len(control)) if i not in planted)
+    seen = []
+    # A planted document matching a clean item is not recall of anything planted.
+    monkeypatch.setattr(subprocess, "run", fake_decon([(0, clean)], seen))
+    result = tiny_study.run(PlantedDecon, binary=Path("decon"))
+    assert set(result["forms"]) == set(forms)
+    assert result["forms"]["verbatim"]["default"]["pct"] == 0
+    assert len(seen) == len(forms) * len(PlantedDecon.SETTINGS)
+
+    monkeypatch.setattr(subprocess, "run", fake_decon([(0, planted[0])], seen))
+    result = tiny_study.run(PlantedDecon, binary=Path("decon"))
+    assert result["forms"]["verbatim"]["default"]["pct"] == 100
