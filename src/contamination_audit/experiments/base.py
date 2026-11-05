@@ -4,8 +4,8 @@ An experiment reproduces one result from the paper. It computes a
 JSON-serialisable value in `run`, describes it for a terminal in `report`, and
 the study saves it to results/paper/<name>.json.
 
-The study loads each input once. Most experiments read a 100,000-document
-sample of Dolci. The headline experiments read the whole corpus through a scan:
+The study loads each input once. A few experiments read the first 100,000
+documents of Dolci. The headline experiments read the whole corpus through a scan:
 one pass of a published filter over every document, against every benchmark
 item at once, cached under work/scans/ and shared by every experiment that
 needs it.

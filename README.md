@@ -71,12 +71,12 @@ Each experiment writes one file, `results/paper/<name>.json`.
 | Phrase-agreement filtering | `phrases` |
 | Filtering on rare n-grams, tuned and tested on separate items | `rare_ngrams` |
 | Embedding retrieval, swept over a cosine threshold, on all of Dolci | `embedding` |
+| A string rule and the embedding filter together, tuned and tested on separate items | `combined` |
 | Corpus composition, and the sources the flags come from | `composition` |
 
-`flag_counts`, `agreement`, `strata`, `matched`, `collateral`, `rare_ngrams`
-and the last point of `scaling` use all of Dolci, and the replications use all
-of the other two corpora. The parameter sweeps, `mechanism`, `phrases` and
-`validation` use the first 100,000 Dolci documents.
+Almost everything reads the whole corpus: all of Dolci, or all of the other two
+corpora for the replications. Only `mechanism`, `validation` and `composition`
+use the first 100,000 Dolci documents.
 
 ## The filters
 
@@ -231,11 +231,15 @@ checked by regenerating every file into an empty directory and comparing
 bytes. The committed results were produced with Python 3.10, transformers 5.6,
 tokenizers 0.22, spaCy 3.8 with `en_core_web_lg` 3.8.0, and rapidfuzz 3.14.
 
-Three results are outside that check. `decon*.json` come from a separate binary,
-and `embedding.json` depends on floating-point arithmetic that varies with
-hardware, so its cosines can differ slightly on another machine and an item very
-close to a threshold could change sides. It was made with torch 2.11 and
-sentence-transformers 5.4 on CUDA 12.6.
+Several results are outside that check. `decon*.json` come from a separate
+binary, and `embedding.json` and `combined.json` depend on floating-point
+arithmetic that varies with hardware, so their cosines can differ slightly on
+another machine and an item very close to a threshold could change sides. They
+were made with torch 2.11 and sentence-transformers 5.4 on CUDA 12.6.
+
+`tuning` reads all of Dolci at every setting and took about four hours on a
+laptop, almost all of it in the Qwen and fuzzy sweeps. `combined` needs `tuning`,
+`phrases` and `embedding` first.
 
 transformers, datasets and tokenizers all require `huggingface-hub` below 2.0.
 If an unrelated package has upgraded it, imports fail; reinstall it with

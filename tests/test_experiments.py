@@ -9,6 +9,7 @@ from contamination_audit.errors import MissingDataError
 from contamination_audit.experiments import EXPERIMENTS
 from contamination_audit.experiments.agreement import FilterAgreement
 from contamination_audit.experiments.collateral import CollateralLoss
+from contamination_audit.experiments.combined import best_under_budget
 from contamination_audit.experiments.flag_counts import FlagCounts
 from contamination_audit.experiments.mechanism import Mechanism
 from contamination_audit.experiments.phrases import REQUIRED_FRACTIONS, PhraseAgreementSweep
@@ -85,6 +86,17 @@ def test_agreement(tiny_study):
     assert result["consensus"][2]["items"] == 1
     assert result["jaccard"] == {"words-8gram|fuzzy-95": 0.5}
     assert result["filters"] == ["words-8gram", "fuzzy-95", "decon"]
+
+
+def test_the_combined_filter_takes_the_most_recall_within_budget():
+    scores = {
+        "over budget": {"fp": 3.0, "recall": 99.0},
+        "within": {"fp": 2.0, "recall": 60.0},
+        "cleaner tie": {"fp": 1.0, "recall": 60.0},
+        "lower recall": {"fp": 0.0, "recall": 40.0},
+    }
+    assert best_under_budget(scores, budget=2.0) == "cleaner tie"
+    assert best_under_budget({"over budget": scores["over budget"]}, budget=2.0) is None
 
 
 def test_a_replication_reads_the_whole_corpus_and_its_sources(tiny_study, tiny_root):

@@ -17,10 +17,10 @@ REQUIRED_FRACTIONS = (0.50, 0.30, 0.20, 0.10, 0.05)
 
 class PhraseAgreementSweep(Experiment):
     name = "phrases"
-    title = "Phrase-agreement filtering: 20 sampled 8-word windows per item"
+    title = "Phrase-agreement filtering on all of Dolci: 20 sampled 8-word windows per item"
 
     def run(self):
-        corpus = self.study.questions(DOLCI)
+        corpus = self.study.full_questions(DOLCI)
         split = self.study.split(DOLCI)
 
         rows = []
@@ -37,6 +37,10 @@ class PhraseAgreementSweep(Experiment):
                     "detect": measurement.percent,
                     "fp": control.percent,
                     "frac": false_discovery_share(control, measurement),
+                    # Positions in measurement + control, for combining rules item by item.
+                    "flagged": sorted(
+                        flagged_measurement | {len(split.measurement) + i for i in flagged_control}
+                    ),
                 }
             )
         return rows

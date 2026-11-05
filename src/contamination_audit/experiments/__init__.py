@@ -8,6 +8,7 @@ result: `agreement` and `strata` both read `flag_counts`.
 from .agreement import FilterAgreement
 from .base import Experiment, Study
 from .collateral import CollateralLoss
+from .combined import CombinedFilter
 from .composition import Composition
 from .embedding import EmbeddingFilter
 from .flag_counts import FlagCounts
@@ -41,6 +42,7 @@ EXPERIMENTS: dict[str, type[Experiment]] = {
         PlantedRecall,
         RareNgramEvaluation,
         EmbeddingFilter,
+        CombinedFilter,
         Strata,
         Composition,
     )

@@ -1,0 +1,105 @@
+{
+ "budget": 2.0,
+ "cells": {
+  "tune_planted": 69,
+  "tune_clean": 69,
+  "test_planted": 69,
+  "test_clean": 73
+ },
+ "n_measure": 502,
+ "selected": {
+  "string": {
+   "string_rule": "phrase 0.20",
+   "cosine": null,
+   "tune": {
+    "fp": 0.0,
+    "recall": 65.21739130434783,
+    "forms": {
+     "verbatim": 100.0,
+     "with_answer": 100.0,
+     "retypeset": 57.971014492753625,
+     "stem": 97.10144927536231,
+     "in_conversation": 100.0,
+     "paraphrase": 1.4492753623188406,
+     "paraphrase_free": 0.0
+    }
+   },
+   "test": {
+    "fp": 0.0,
+    "recall": 63.768115942028984,
+    "forms": {
+     "verbatim": 100.0,
+     "with_answer": 100.0,
+     "retypeset": 47.82608695652174,
+     "stem": 98.55072463768116,
+     "in_conversation": 100.0,
+     "paraphrase": 0.0,
+     "paraphrase_free": 0.0
+    }
+   },
+   "measurement_flagged": 16
+  },
+  "embedding": {
+   "string_rule": null,
+   "cosine": 0.8,
+   "tune": {
+    "fp": 0.0,
+    "recall": 72.25672877846792,
+    "forms": {
+     "verbatim": 100.0,
+     "with_answer": 100.0,
+     "retypeset": 100.0,
+     "stem": 50.72463768115942,
+     "in_conversation": 24.63768115942029,
+     "paraphrase": 84.05797101449275,
+     "paraphrase_free": 46.3768115942029
+    }
+   },
+   "test": {
+    "fp": 5.47945205479452,
+    "recall": 68.1159420289855,
+    "forms": {
+     "verbatim": 100.0,
+     "with_answer": 100.0,
+     "retypeset": 100.0,
+     "stem": 44.927536231884055,
+     "in_conversation": 17.391304347826086,
+     "paraphrase": 82.6086956521739,
+     "paraphrase_free": 31.884057971014492
+    }
+   },
+   "measurement_flagged": 70
+  },
+  "combined": {
+   "string_rule": "phrase 0.20",
+   "cosine": 0.8,
+   "tune": {
+    "fp": 0.0,
+    "recall": 89.85507246376811,
+    "forms": {
+     "verbatim": 100.0,
+     "with_answer": 100.0,
+     "retypeset": 100.0,
+     "stem": 98.55072463768116,
+     "in_conversation": 100.0,
+     "paraphrase": 84.05797101449275,
+     "paraphrase_free": 46.3768115942029
+    }
+   },
+   "test": {
+    "fp": 5.47945205479452,
+    "recall": 87.78467908902691,
+    "forms": {
+     "verbatim": 100.0,
+     "with_answer": 100.0,
+     "retypeset": 100.0,
+     "stem": 100.0,
+     "in_conversation": 100.0,
+     "paraphrase": 82.6086956521739,
+     "paraphrase_free": 31.884057971014492
+    }
+   },
+   "measurement_flagged": 78
+  }
+ }
+}

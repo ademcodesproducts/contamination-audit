@@ -50,10 +50,12 @@ def flag_by_ngram_size(
 
 class Tuning(Experiment):
     name = "tuning"
-    title = "Measurement against control flag rates as each filter's setting varies"
+    title = (
+        "Measurement against control flag rates as each filter's setting varies, on all of Dolci"
+    )
 
     def run(self):
-        corpus = self.study.questions(DOLCI)
+        corpus = self.study.full_questions(DOLCI)
         split = self.study.split(DOLCI)
         return {
             "word": self._ngram_sweep(corpus, split, S1_WORDS),
@@ -85,6 +87,8 @@ class Tuning(Experiment):
             "detect": measurement.percent,
             "fp": control.percent,
             "frac": false_discovery_share(control, measurement),
+            # Positions in measurement + control, for combining rules item by item.
+            "flagged": sorted(flagged),
         }
 
     def report(self, result):
