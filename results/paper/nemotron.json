@@ -1,22 +1,26 @@
 {
  "corpus": "Nemotron-SFT-Math-v4",
- "docs": 100000,
+ "docs": 545431,
+ "sources": {
+  "Math StackExchange": 448992,
+  "AoPS": 96439
+ },
  "n_measure": 680,
  "n_control": 241,
  "filters": {
   "s1-8gram-word": {
-   "detect": 15.441176470588236,
-   "fp": 5.809128630705394,
-   "n_detect": 105,
-   "n_fp": 14,
-   "fd_share": 0.37621023513139695
+   "detect": 16.470588235294116,
+   "fp": 7.053941908713693,
+   "n_detect": 112,
+   "n_fp": 17,
+   "fd_share": 0.42827504445761705
   },
   "ot3-13gram-qwen-or-fuzz75": {
-   "detect": 24.11764705882353,
-   "fp": 15.767634854771785,
-   "n_detect": 164,
-   "n_fp": 38,
-   "fd_share": 0.6537799817832203
+   "detect": 25.88235294117647,
+   "fp": 19.91701244813278,
+   "n_detect": 176,
+   "n_fp": 48,
+   "fd_share": 0.7695209354960391
   },
   "ot114k-fuzz95": {
    "detect": 0.0,

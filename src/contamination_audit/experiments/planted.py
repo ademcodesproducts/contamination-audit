@@ -29,7 +29,11 @@ from .rates import SEED, bootstrap_rate
 from .strata import kind_of
 from .tuning import FUZZY_THRESHOLDS, NGRAM_SIZES
 
-PARAPHRASES_FILE = "planted_paraphrases.jsonl"
+# Each paraphrase style, by the name of its planted form, and where it is saved.
+PARAPHRASE_FILES = {
+    "paraphrase": "planted_paraphrases.jsonl",
+    "paraphrase_free": "planted_paraphrases_free.jsonl",
+}
 INSTRUCTION = "Please reason step by step, and put your final answer within \\boxed{}."
 
 
@@ -76,12 +80,13 @@ FORMS: dict[str, Form] = {
 }
 
 
-def load_paraphrases(directory: Path) -> dict[str, str]:
-    """LLM restatements of the control items, if they have been generated."""
-    path = directory / PARAPHRASES_FILE
-    if not path.exists():
-        return {}
-    return {row["id"]: row["paraphrase"] for row in read_jsonl(path)}
+def load_paraphrases(directory: Path) -> dict[str, dict[str, str]]:
+    """LLM restatements of the control items by planted form, for those generated."""
+    return {
+        form: {row["id"]: row["paraphrase"] for row in read_jsonl(directory / filename)}
+        for form, filename in PARAPHRASE_FILES.items()
+        if (directory / filename).exists()
+    }
 
 
 def planted_documents(study) -> tuple[list[BenchmarkItem], list[int], dict[str, list[str]]]:
@@ -95,9 +100,8 @@ def planted_documents(study) -> tuple[list[BenchmarkItem], list[int], dict[str, 
     fillers = random.Random(SEED + 1).sample(corpus, len(planted))
 
     forms = dict(FORMS)
-    paraphrases = load_paraphrases(study.paths.benchmarks)
-    if paraphrases:
-        forms["paraphrase"] = lambda item, _: paraphrases[item.id]
+    for form, paraphrases in load_paraphrases(study.paths.benchmarks).items():
+        forms[form] = lambda item, _, paraphrases=paraphrases: paraphrases[item.id]
     documents = {
         name: [form(control[i], filler) for i, filler in zip(planted, fillers, strict=True)]
         for name, form in forms.items()

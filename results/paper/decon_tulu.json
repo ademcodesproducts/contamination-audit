@@ -1,7 +1,7 @@
 {
- "corpus_rows": 100000,
+ "corpus_rows": 334252,
  "n_measure": 60,
- "n_control": 722,
+ "n_control": 522,
  "documents": {
   "measure": 0,
   "control": 0

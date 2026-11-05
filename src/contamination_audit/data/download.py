@@ -323,7 +323,7 @@ class NemotronDownload(CorpusDownload):
     dataset = "nvidia/Nemotron-SFT-Math-v4"
     columns = ("uuid", "problem", "source")
     revision = "84d42ad0cb960f07f951b9baa9ed2b46a5a18c66"
-    default_rows = 100_000
+    default_rows = ALL
 
     def document(self, row, index):
         return TrainingDocument(row.get("uuid"), row.get("problem") or "", row.get("source"))
@@ -333,15 +333,15 @@ class TuluMathDownload(CorpusDownload):
     """The mathematics components of the Tulu 3 SFT mixture, in mixture order.
 
     Documents are identified by their row in the mixture, which has no stable
-    id of its own. The first 100,000 math rows all come from the PersonaHub
-    component, so that is what the replication experiment measures.
+    id of its own. The components are not shuffled together, so any prefix
+    over-represents the first of them, PersonaHub.
     """
 
     corpus = TULU
     dataset = "allenai/tulu-3-sft-mixture"
     columns = ("messages", "source")
     revision = "b14afda60f1bbebe55d5d2fa1e4df5042f97f8be"
-    default_rows = 100_000
+    default_rows = ALL
 
     MATH_SOURCES = frozenset(
         {

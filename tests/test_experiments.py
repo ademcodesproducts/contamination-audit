@@ -2,7 +2,10 @@
 
 import json
 
+import pytest
+
 from contamination_audit.data import DOLCI
+from contamination_audit.errors import MissingDataError
 from contamination_audit.experiments import EXPERIMENTS
 from contamination_audit.experiments.agreement import FilterAgreement
 from contamination_audit.experiments.collateral import CollateralLoss
@@ -10,6 +13,7 @@ from contamination_audit.experiments.flag_counts import FlagCounts
 from contamination_audit.experiments.mechanism import Mechanism
 from contamination_audit.experiments.phrases import REQUIRED_FRACTIONS, PhraseAgreementSweep
 from contamination_audit.experiments.provenance import ControlProvenance
+from contamination_audit.experiments.replication import TuluReplication
 from contamination_audit.experiments.strata import Strata
 from contamination_audit.experiments.validation import ControlValidation
 
@@ -81,6 +85,23 @@ def test_agreement(tiny_study):
     assert result["consensus"][2]["items"] == 1
     assert result["jaccard"] == {"words-8gram|fuzzy-95": 0.5}
     assert result["filters"] == ["words-8gram", "fuzzy-95", "decon"]
+
+
+def test_a_replication_reads_the_whole_corpus_and_its_sources(tiny_study, tiny_root):
+    corpora = tiny_root / "data" / "corpora"
+    rows = enumerate(["first", "first", "second"])
+    lines = [
+        json.dumps({"train_id": f"t{i}", "problem": f"question {i}", "source": source})
+        for i, source in rows
+    ]
+    (corpora / "tulu_math.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    with pytest.raises(MissingDataError, match="not a complete download"):
+        tiny_study.run(TuluReplication)
+
+    (corpora / "tulu_math.complete.json").write_text(json.dumps({"documents": 3}), encoding="utf-8")
+    result = tiny_study.run(TuluReplication)
+    assert result["docs"] == 3
+    assert result["sources"] == {"first": 2, "second": 1}
 
 
 def test_decon_run_on_a_different_corpus_is_left_out(tiny_study):

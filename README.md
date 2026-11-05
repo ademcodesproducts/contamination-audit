@@ -39,9 +39,9 @@ contamination-audit run                 # writes results/paper/*.json
 ```
 
 All of Dolci is a 36 GB download, read one Parquet shard at a time, from which
-about 1.8 GB of questions is kept; Tülu 3 and Nemotron default to their first
-100,000 documents. A download that drops resumes where it stopped when run
-again.
+about 1.8 GB of questions is kept; Tülu 3 and Nemotron are 1.4 and 5.5 GB, of
+which about 1.1 GB is kept. A download that drops resumes where it stopped when
+run again.
 
 `contamination-audit run --list` shows the experiments, and
 `contamination-audit run scaling tuning` runs a subset. The experiments on all
@@ -74,9 +74,9 @@ Each experiment writes one file, `results/paper/<name>.json`.
 | Corpus composition, and the sources the flags come from | `composition` |
 
 `flag_counts`, `agreement`, `strata`, `matched`, `collateral`, `rare_ngrams`
-and the last point of `scaling` use all of Dolci. The parameter sweeps,
-`mechanism`, `phrases` and `validation` use its first 100,000 documents, as do
-the replications on the other two corpora.
+and the last point of `scaling` use all of Dolci, and the replications use all
+of the other two corpora. The parameter sweeps, `mechanism`, `phrases` and
+`validation` use the first 100,000 Dolci documents.
 
 ## The filters
 
@@ -121,16 +121,19 @@ LaTeX delimiters, cut to their first half, and inside a longer conversation.
 Half the controls, chosen within each kind of question, are planted and half
 stay clean, so recall and false positives come from the same items.
 
-A further form, the question restated by a language model, is committed in
-`data/benchmarks/planted_paraphrases.jsonl`, made with `gpt-6-astra`; each
-line records the model, the response id and the SHA-256 of the prompt. Both
-experiments add the form whenever that file exists, so they never call an API.
-A new run words them differently, so the committed file is what reproduces
-the paper. To make it again, which needs an OpenAI key in `OPENAI_API_KEY`,
+Two further forms restate the question with a language model, `gpt-6-astra`,
+and are committed in `data/benchmarks/`. `planted_paraphrases.jsonl` keeps
+mathematical notation in LaTeX, and `planted_paraphrases_free.jsonl` is told
+not to copy any formula. Recall depends heavily on which one is used. Each line
+records the model, the response id and the SHA-256 of the prompt. The
+experiments add a form whenever its file exists, so they never call an API. A
+new run words them differently, so the committed files are what reproduce the
+paper. To make them again, which needs an OpenAI key in `OPENAI_API_KEY`,
 
 ```bash
 pip install -e ".[paraphrase]"
 contamination-audit paraphrase-controls --model gpt-6-astra
+contamination-audit paraphrase-controls --model gpt-6-astra --style free
 ```
 
 ## The embedding filter
@@ -173,6 +176,12 @@ it. Research-derived controls therefore count only when their source paper
 first appeared on arXiv after the corpus's release. This drops none of Dolci's
 or Tülu 3's controls and 20 of Nemotron's.
 
+A contest can also reuse an old problem. Problem 1 of the 2026 AIME I appears
+almost word for word in Tülu 3's NuminaMath component, in data uploaded in
+November 2024, though not in Dolci. It stays among Tülu 3's controls and is its
+one whole-string flag. OlymMATH was published in 2025 but compiled from older
+contests, so it is not a control for Tülu 3 at all.
+
 **Training corpora** are downloaded into `data/corpora/`, keeping only the
 first user turn of each example, which is where a leaked benchmark question
 would appear and what the released filter code searches.
@@ -180,8 +189,8 @@ would appear and what the released filter code searches.
 | Corpus | Source | Revision | Released | Documents used |
 |---|---|---|---|---|
 | Dolci | `allenai/Dolci-Think-SFT-32B` | `7668c638` | Nov 2025 | all 2,253,676 |
-| Tülu 3 math | `allenai/tulu-3-sft-mixture`, math sources | `b14afda6` | Nov 2024 | the first 100,000 |
-| Nemotron | `nvidia/Nemotron-SFT-Math-v4` | `84d42ad0` | June 2026 | the first 100,000 |
+| Tülu 3 math | `allenai/tulu-3-sft-mixture`, math sources | `b14afda6` | Nov 2024 | all 334,252 |
+| Nemotron | `nvidia/Nemotron-SFT-Math-v4` | `84d42ad0` | June 2026 | all 545,431 |
 
 Dolci's revision is the March 2026 re-upload of the November 2025 release. It
 has the same examples in the same order with the same questions, and replaces
@@ -190,10 +199,10 @@ one placeholder source label with one per original dataset. Eight of its
 revision rewrote the files of its first upload without changing any document
 read here. Its release date is the day its data first appeared on the Hub.
 
-Experiments always read a prefix of a corpus, never a sample, so a larger
-corpus contains every smaller one and download order matters. The first
-100,000 math rows of the Tülu 3 mixture all come from one component,
-`ai2-adapt-dev/personahub_math_v5_regen_149960`.
+Experiments read a whole corpus or a prefix of it, never a sample, so a larger
+corpus contains every smaller one and download order matters. A prefix is not
+representative: the first 100,000 math rows of the Tülu 3 mixture all come from
+one component, `ai2-adapt-dev/personahub_math_v5_regen_149960`.
 
 Each corpus has its own temporal split. AIME 2026 is a control for Dolci, which
 it postdates, but a measurement item for Nemotron, which postdates it. The

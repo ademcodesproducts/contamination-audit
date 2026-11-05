@@ -111,7 +111,14 @@ class EmbeddingFilter(Experiment):
         ]
         for threshold, row in result["thresholds"].items():
             recall = row["planted_recall"]
-            forms = ("verbatim", "retypeset", "stem", "in_conversation", "paraphrase")
+            forms = (
+                "verbatim",
+                "retypeset",
+                "stem",
+                "in_conversation",
+                "paraphrase",
+                "paraphrase_free",
+            )
             cells = " / ".join(f"{recall[f]['pct']:.0f}" for f in forms if f in recall)
             lines.append(
                 f"{threshold:>6s} {row['measure']['pct']:7.1f}% {row['control']['pct']:7.1f}% "

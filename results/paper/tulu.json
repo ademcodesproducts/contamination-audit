@@ -1,36 +1,43 @@
 {
  "corpus": "tulu_math",
- "docs": 100000,
+ "docs": 334252,
+ "sources": {
+  "ai2-adapt-dev/personahub_math_v5_regen_149960": 149960,
+  "ai2-adapt-dev/numinamath_tir_math_decontaminated": 64312,
+  "ai2-adapt-dev/tulu_v3.9_open_math_2_gsm8k_50k": 50000,
+  "allenai/tulu-3-sft-personas-math-grade": 49980,
+  "ai2-adapt-dev/tulu_v3.9_personahub_math_interm_algebra_20k": 20000
+ },
  "n_measure": 60,
- "n_control": 722,
+ "n_control": 522,
  "filters": {
   "s1-8gram-word": {
-   "detect": 3.3333333333333335,
-   "fp": 6.232686980609419,
-   "n_detect": 2,
-   "n_fp": 45,
-   "fd_share": 1.8698060941828256
+   "detect": 28.333333333333332,
+   "fp": 19.157088122605366,
+   "n_detect": 17,
+   "n_fp": 100,
+   "fd_share": 0.676132521974307
   },
   "ot3-13gram-qwen-or-fuzz75": {
-   "detect": 1.6666666666666667,
-   "fp": 6.925207756232687,
-   "n_detect": 1,
-   "n_fp": 50,
-   "fd_share": 4.1551246537396125
+   "detect": 30.0,
+   "fp": 17.624521072796934,
+   "n_detect": 18,
+   "n_fp": 92,
+   "fd_share": 0.5874840357598978
   },
   "ot114k-fuzz95": {
-   "detect": 0.0,
-   "fp": 0.0,
-   "n_detect": 0,
-   "n_fp": 0,
-   "fd_share": null
+   "detect": 1.6666666666666667,
+   "fp": 0.19157088122605365,
+   "n_detect": 1,
+   "n_fp": 1,
+   "fd_share": 0.11494252873563218
   },
   "tulu3-8gram-50pct": {
-   "detect": 0.0,
-   "fp": 0.0,
-   "n_detect": 0,
-   "n_fp": 0,
-   "fd_share": null
+   "detect": 1.6666666666666667,
+   "fp": 0.5747126436781609,
+   "n_detect": 1,
+   "n_fp": 3,
+   "fd_share": 0.3448275862068966
   },
   "decon": {
    "detect": 0.0,

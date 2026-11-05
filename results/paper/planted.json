@@ -4311,6 +4311,701 @@
      }
     }
    }
+  },
+  "paraphrase_free": {
+   "s1-8gram-word": {
+    "recall": {
+     "pct": 4.316546762589928,
+     "ci": [
+      1.4388489208633093,
+      7.913669064748201
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 6,
+      "pct": 5.714285714285714
+     }
+    }
+   },
+   "ot3-13gram-qwen-or-fuzz75": {
+    "recall": {
+     "pct": 2.8776978417266186,
+     "ci": [
+      0.7194244604316546,
+      5.755395683453237
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 4,
+      "pct": 3.8095238095238093
+     }
+    }
+   },
+   "ot114k-fuzz95": {
+    "recall": {
+     "pct": 0.0,
+     "ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 0,
+      "pct": 0.0
+     }
+    }
+   },
+   "tulu3-8gram-50pct": {
+    "recall": {
+     "pct": 0.0,
+     "ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 0,
+      "pct": 0.0
+     }
+    }
+   },
+   "word n=5": {
+    "recall": {
+     "pct": 42.44604316546763,
+     "ci": [
+      34.53237410071942,
+      51.07913669064748
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 7,
+      "pct": 20.58823529411765
+     },
+     "research": {
+      "n": 105,
+      "flagged": 52,
+      "pct": 49.523809523809526
+     }
+    }
+   },
+   "qwen n=5": {
+    "recall": {
+     "pct": 77.6978417266187,
+     "ci": [
+      70.50359712230215,
+      84.1726618705036
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 18,
+      "pct": 52.94117647058823
+     },
+     "research": {
+      "n": 105,
+      "flagged": 90,
+      "pct": 85.71428571428571
+     }
+    }
+   },
+   "word n=8": {
+    "recall": {
+     "pct": 4.316546762589928,
+     "ci": [
+      1.4388489208633093,
+      7.913669064748201
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 6,
+      "pct": 5.714285714285714
+     }
+    }
+   },
+   "qwen n=8": {
+    "recall": {
+     "pct": 20.863309352517987,
+     "ci": [
+      14.388489208633093,
+      28.057553956834532
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 2,
+      "pct": 5.882352941176471
+     },
+     "research": {
+      "n": 105,
+      "flagged": 27,
+      "pct": 25.714285714285715
+     }
+    }
+   },
+   "word n=10": {
+    "recall": {
+     "pct": 1.4388489208633093,
+     "ci": [
+      0.0,
+      3.597122302158273
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 2,
+      "pct": 1.9047619047619047
+     }
+    }
+   },
+   "qwen n=10": {
+    "recall": {
+     "pct": 10.071942446043165,
+     "ci": [
+      5.755395683453237,
+      15.107913669064748
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 1,
+      "pct": 2.9411764705882355
+     },
+     "research": {
+      "n": 105,
+      "flagged": 13,
+      "pct": 12.380952380952381
+     }
+    }
+   },
+   "word n=13": {
+    "recall": {
+     "pct": 0.0,
+     "ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 0,
+      "pct": 0.0
+     }
+    }
+   },
+   "qwen n=13": {
+    "recall": {
+     "pct": 2.158273381294964,
+     "ci": [
+      0.0,
+      5.0359712230215825
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 3,
+      "pct": 2.857142857142857
+     }
+    }
+   },
+   "word n=15": {
+    "recall": {
+     "pct": 0.0,
+     "ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 0,
+      "pct": 0.0
+     }
+    }
+   },
+   "qwen n=15": {
+    "recall": {
+     "pct": 0.7194244604316546,
+     "ci": [
+      0.0,
+      2.158273381294964
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 1,
+      "pct": 0.9523809523809523
+     }
+    }
+   },
+   "word n=20": {
+    "recall": {
+     "pct": 0.0,
+     "ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 0,
+      "pct": 0.0
+     }
+    }
+   },
+   "qwen n=20": {
+    "recall": {
+     "pct": 0.0,
+     "ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 0,
+      "pct": 0.0
+     }
+    }
+   },
+   "word n=25": {
+    "recall": {
+     "pct": 0.0,
+     "ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 0,
+      "pct": 0.0
+     }
+    }
+   },
+   "qwen n=25": {
+    "recall": {
+     "pct": 0.0,
+     "ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 0,
+      "pct": 0.0
+     }
+    }
+   },
+   "word n=30": {
+    "recall": {
+     "pct": 0.0,
+     "ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 0,
+      "pct": 0.0
+     }
+    }
+   },
+   "qwen n=30": {
+    "recall": {
+     "pct": 0.0,
+     "ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 0,
+      "pct": 0.0
+     }
+    }
+   },
+   "fuzz 95": {
+    "recall": {
+     "pct": 0.0,
+     "ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 0,
+      "pct": 0.0
+     }
+    }
+   },
+   "fuzz 90": {
+    "recall": {
+     "pct": 0.0,
+     "ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 0,
+      "pct": 0.0
+     }
+    }
+   },
+   "fuzz 85": {
+    "recall": {
+     "pct": 0.0,
+     "ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 0,
+      "pct": 0.0
+     }
+    }
+   },
+   "fuzz 80": {
+    "recall": {
+     "pct": 0.0,
+     "ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 0,
+      "pct": 0.0
+     }
+    }
+   },
+   "fuzz 75": {
+    "recall": {
+     "pct": 0.7194244604316546,
+     "ci": [
+      0.0,
+      2.158273381294964
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 1,
+      "pct": 0.9523809523809523
+     }
+    }
+   },
+   "fuzz 70": {
+    "recall": {
+     "pct": 0.7194244604316546,
+     "ci": [
+      0.0,
+      2.158273381294964
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 1,
+      "pct": 0.9523809523809523
+     }
+    }
+   },
+   "fuzz 65": {
+    "recall": {
+     "pct": 3.597122302158273,
+     "ci": [
+      0.7194244604316546,
+      7.194244604316546
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 5,
+      "pct": 4.761904761904762
+     }
+    }
+   },
+   "fuzz 60": {
+    "recall": {
+     "pct": 9.352517985611511,
+     "ci": [
+      5.0359712230215825,
+      14.388489208633093
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 2,
+      "pct": 5.882352941176471
+     },
+     "research": {
+      "n": 105,
+      "flagged": 11,
+      "pct": 10.476190476190476
+     }
+    }
+   },
+   "phrase 0.50": {
+    "recall": {
+     "pct": 0.0,
+     "ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 0,
+      "pct": 0.0
+     }
+    }
+   },
+   "phrase 0.30": {
+    "recall": {
+     "pct": 0.0,
+     "ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 0,
+      "pct": 0.0
+     }
+    }
+   },
+   "phrase 0.20": {
+    "recall": {
+     "pct": 0.0,
+     "ci": [
+      0.0,
+      0.0
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 0,
+      "pct": 0.0
+     }
+    }
+   },
+   "phrase 0.10": {
+    "recall": {
+     "pct": 0.7194244604316546,
+     "ci": [
+      0.0,
+      2.158273381294964
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 1,
+      "pct": 0.9523809523809523
+     }
+    }
+   },
+   "phrase 0.05": {
+    "recall": {
+     "pct": 1.4388489208633093,
+     "ci": [
+      0.0,
+      3.597122302158273
+     ]
+    },
+    "recall_by_kind": {
+     "competition": {
+      "n": 34,
+      "flagged": 0,
+      "pct": 0.0
+     },
+     "research": {
+      "n": 105,
+      "flagged": 2,
+      "pct": 1.9047619047619047
+     }
+    }
+   }
   }
  }
 }

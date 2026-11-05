@@ -71,6 +71,12 @@ def build_parser() -> argparse.ArgumentParser:
         "paraphrase-controls", help="restate the control items with an LLM (paid API calls)"
     )
     rewrite.add_argument("--model", required=True, help="OpenAI model to restate with")
+    rewrite.add_argument(
+        "--style",
+        choices=("faithful", "free"),
+        default="faithful",
+        help="'free' tells the model not to copy any formula",
+    )
     return parser
 
 
@@ -140,11 +146,12 @@ def decon(args, paths: ProjectPaths) -> int:
 
 def paraphrase_controls(args, paths: ProjectPaths) -> int:
     from .data import BenchmarkLibrary
-    from .experiments.planted import PARAPHRASES_FILE
+    from .experiments.planted import PARAPHRASE_FILES
     from .paraphrase import paraphrase_controls as run
 
-    output = paths.benchmarks / PARAPHRASES_FILE
-    run(BenchmarkLibrary.load(paths.benchmarks), output, args.model)
+    form = "paraphrase_free" if args.style == "free" else "paraphrase"
+    output = paths.benchmarks / PARAPHRASE_FILES[form]
+    run(BenchmarkLibrary.load(paths.benchmarks), output, args.model, args.style)
     print(f"wrote {output}")
     return 0
 

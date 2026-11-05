@@ -8,6 +8,7 @@ with the corpus.
 
 from __future__ import annotations
 
+from collections import Counter
 from typing import ClassVar
 
 from ..data import NEMOTRON, TULU, TrainingCorpus
@@ -20,7 +21,10 @@ class Replication(Experiment):
     decon_result: ClassVar[str]
 
     def run(self):
-        documents = self.study.questions(self.corpus)
+        # The whole corpus: a prefix can be a single source. The first 100,000
+        # math rows of the Tulu 3 mixture are all PersonaHub word problems.
+        full = self.study.full_documents(self.corpus)
+        documents = [document.problem for document in full]
         split = self.study.split(self.corpus)
 
         filters = {}
@@ -54,6 +58,7 @@ class Replication(Experiment):
         return {
             "corpus": self.corpus.name,
             "docs": len(documents),
+            "sources": dict(Counter(document.source for document in full).most_common()),
             "n_measure": len(split.measurement),
             "n_control": len(split.control),
             "filters": filters,
@@ -82,7 +87,7 @@ class TuluReplication(Replication):
 
     name = "tulu"
     decon_result = "decon_tulu"
-    title = "Replication on the Tulu 3 math SFT data (100,000 documents)"
+    title = "Replication on all of the Tulu 3 math SFT data"
     corpus = TULU
 
 
@@ -97,5 +102,5 @@ class NemotronReplication(Replication):
 
     name = "nemotron"
     decon_result = "decon_nemotron"
-    title = "Replication on Nemotron-SFT-Math-v4 (100,000 documents)"
+    title = "Replication on all of Nemotron-SFT-Math-v4"
     corpus = NEMOTRON

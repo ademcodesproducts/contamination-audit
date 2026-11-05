@@ -195,10 +195,19 @@ class BenchmarkLibrary:
         )
 
     def tulu_split(self) -> TemporalSplit:
-        """Everything from 2025 on postdates Tulu 3, so it all joins the control."""
+        """Competitions from 2025 on postdate Tulu 3, so they join the control.
+
+        OlymMATH does not. It was published in 2025 but compiled from older
+        contests, and at least one of its problems appears in Tulu 3's NuminaMath
+        source, so its date says nothing about when its problems first existed.
+        """
         dolci = self.dolci_split()
         measurement = tuple(i for i in dolci.measurement if i.benchmark in COMPETITIONS_2024)
-        later = tuple(i for i in dolci.measurement if i.benchmark not in COMPETITIONS_2024)
+        later = tuple(
+            i
+            for i in dolci.measurement
+            if i.benchmark not in COMPETITIONS_2024 and i.benchmark != "olymmath"
+        )
         return TemporalSplit(measurement=measurement, control=later + dolci.control)
 
     def nemotron_split(self) -> TemporalSplit:

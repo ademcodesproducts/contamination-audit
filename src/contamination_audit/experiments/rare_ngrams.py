@@ -66,14 +66,13 @@ class RareNgramEvaluation(Experiment):
         corpus_frequency = Counter(gram for grams in in_corpus.values() for gram in grams)
 
         fillers = random.Random(SEED + 1).sample([q for q in corpus if q.strip()], len(planted))
-        paraphrases = load_paraphrases(self.study.paths.benchmarks)
         forms = {
             name: [form(control[i], f) for i, f in zip(planted, fillers, strict=True)]
             for name, form in FORMS.items()
         }
         forms["five_copies"] = [control[i].problem for i in planted for _ in range(COPIES)]
-        if paraphrases:
-            forms["paraphrase"] = [paraphrases[control[i].id] for i in planted]
+        for form, paraphrases in load_paraphrases(self.study.paths.benchmarks).items():
+            forms[form] = [paraphrases[control[i].id] for i in planted]
 
         results = {}
         for form, documents in forms.items():

@@ -132,7 +132,7 @@ class DeconRun(Experiment):
         self.work = study.paths.work / self.name
 
     def training_documents(self) -> list[TrainingDocument]:
-        return self.study.documents(self.corpus)
+        return self.study.full_documents(self.corpus)
 
     def run(self):
         split = self.study.split(self.corpus)
@@ -181,9 +181,6 @@ class DolciDecon(DeconRun):
     name = "decon"
     title = "Ai2 decon on all of Dolci"
     corpus = DOLCI
-
-    def training_documents(self):
-        return self.study.full_documents(DOLCI)
 
     def run(self):
         result = super().run()
@@ -240,13 +237,13 @@ class DolciDecon(DeconRun):
 
 class TuluDecon(DeconRun):
     name = "decon_tulu"
-    title = "Ai2 decon on the Tulu 3 math SFT data (100,000 documents)"
+    title = "Ai2 decon on all of the Tulu 3 math SFT data"
     corpus = TULU
 
 
 class NemotronDecon(DeconRun):
     name = "decon_nemotron"
-    title = "Ai2 decon on Nemotron-SFT-Math-v4 (100,000 documents)"
+    title = "Ai2 decon on all of Nemotron-SFT-Math-v4"
     corpus = NEMOTRON
 
 

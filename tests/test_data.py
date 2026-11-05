@@ -33,13 +33,12 @@ def test_dolci_split_is_olymmath_and_matharena_against_2026(library):
 
 
 def test_tulu_split_measures_only_on_2024(library):
-    # Tulu 3 shipped in November 2024, so everything later becomes a control,
-    # in the same order as before.
+    # Tulu 3 shipped in November 2024, so every later competition becomes a control,
+    # in the same order as before. OlymMATH is compiled from older contests, so it
+    # is neither: its 2025 date does not date its problems.
     split = TULU.split(library)
     assert ids(split.measurement) == ["aime_2024_I_0000"]
     assert ids(split.control) == [
-        "olym_en_hard_0000",
-        "olym_en_easy_0000",
         "aime_2025_0000",
         "hmmt_feb_2025_0000",
         "aime_2026_0000",
